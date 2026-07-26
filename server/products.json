@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Terra Tokalı Sandalet",
+    "category": "Yazlık",
+    "price": 2290,
+    "stock": 12,
+    "image": "/products/yazlik-1.png"
+  },
+  {
+    "id": 2,
+    "name": "Mocha Platform Sandalet",
+    "category": "Yazlık",
+    "price": 2490,
+    "stock": 8,
+    "image": "/products/yazlik-2.png"
+  },
+  {
+    "id": 3,
+    "name": "Croco Combat Boot",
+    "category": "Kışlık",
+    "price": 7780,
+    "stock": 5,
+    "image": "/products/kislik-3.png"
+  }
+]

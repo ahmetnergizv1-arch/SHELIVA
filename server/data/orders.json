@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "orderNo": "SH-000001",
+    "customer": {
+      "name": "Ahmet Nergiz",
+      "phone": "0552 644 62 58",
+      "email": "ahmetnergizv1@gmail.com",
+      "city": "istanbul",
+      "district": "bayrampaşa",
+      "address": "asdasdasd"
+    },
+    "items": [
+      {
+        "key": "1-CLR-1785081278676-3-37",
+        "productId": 1,
+        "name": "Terlik Deneme 123",
+        "colorId": "CLR-1785081278676-3",
+        "colorName": "deneme1",
+        "size": "37",
+        "image": "/uploads/product-1-color-1-1785085393908-trt365.jpg",
+        "price": 799,
+        "qty": 1
+      }
+    ],
+    "total": 799,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-07-26T17:03:46.096Z",
+    "approvedAt": "2026-07-26T17:06:18.014Z",
+    "shippedAt": "2026-07-26T17:07:07.030Z",
+    "deliveredAt": "2026-07-26T18:10:51.592Z",
+    "cargoCompany": "",
+    "cargoTracking": ""
+  },
+  {
+    "id": 2,
+    "orderNo": "SH-000002",
+    "customer": {
+      "name": "Ahmet Nergiz",
+      "phone": "0552 644 62 58",
+      "email": "ahmetnergizv1@gmail.com",
+      "city": "istanbul",
+      "district": "bayrampaşa",
+      "address": " n"
+    },
+    "items": [
+      {
+        "key": "1-CLR-1785081278676-3-39",
+        "productId": 1,
+        "name": "Terlik Deneme 123",
+        "colorId": "CLR-1785081278676-3",
+        "colorName": "deneme1",
+        "size": "39",
+        "image": "/uploads/product-1-color-1-1785085393908-trt365.jpg",
+        "price": 799,
+        "qty": 3
+      }
+    ],
+    "total": 2397,
+    "status": "Teslim Edildi",
+    "createdAt": "2026-07-26T17:08:00.960Z",
+    "approvedAt": "2026-07-26T18:10:41.296Z",
+    "shippedAt": "2026-07-26T18:10:49.888Z",
+    "deliveredAt": "2026-07-26T18:10:52.694Z",
+    "cargoCompany": "",
+    "cargoTracking": ""
+  }
+]

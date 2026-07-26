@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "code": "SHL-0001",
+    "name": "Terlik Deneme 123",
+    "category": "Yazlık",
+    "price": 799,
+    "discount": 12,
+    "active": true,
+    "newest": true,
+    "description": "bu ürğn deneme\n\n\nDEEMEE\n\n\n\n\nDEMNEE\n\n\n\nDENEME\n\nDENE\n\nEDENDEMEM\n\n\n\n\nDENEMENDEEE\n\n\n\n\n\n\n\n\n\nDEBMEME",
+    "image": "/uploads/product-1-color-1-1785085393908-trt365.jpg",
+    "colors": [
+      {
+        "id": "CLR-1785081278676-3",
+        "name": "deneme1",
+        "image": "/uploads/product-1-color-1-1785085393908-trt365.jpg",
+        "sizes": {
+          "36": 1,
+          "37": 12,
+          "38": 3,
+          "39": 1,
+          "40": 4,
+          "41": 0
+        }
+      }
+    ],
+    "createdAt": "2026-07-26T17:03:13.910Z",
+    "stock": 10,
+    "updatedAt": "2026-07-26T17:54:25.490Z"
+  }
+]
