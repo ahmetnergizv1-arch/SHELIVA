@@ -1,0 +1,18 @@
+{
+  "storeName": "SHELİVA",
+  "supportPhone": "",
+  "supportEmail": "",
+  "defaultVatRate": 20,
+  "cargoFee": 0,
+  "freeShippingThreshold": 2500,
+  "orderPrefix": "SH",
+  "ticketPrefix": "FIS",
+  "cargoCompanies": [
+    "Yurtiçi Kargo",
+    "Aras Kargo",
+    "MNG Kargo",
+    "Sürat Kargo",
+    "PTT Kargo"
+  ],
+  "otpMode": "test"
+}
