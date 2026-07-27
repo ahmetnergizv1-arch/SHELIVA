@@ -210,3 +210,38 @@ main{padding:30px 34px 50px;min-width:0}
   .costGrid,.costSummary{grid-template-columns:repeat(2,1fr)}
 }
 .netProfitBar{background:linear-gradient(90deg,#eaf9f0,#f7fffa);border:1px solid #bfe7d0;border-radius:10px;padding:20px 25px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}.netProfitBar strong{font-size:28px}
+
+/* SHELIVA PROFESSIONAL PATCH */
+.netProfitCard{background:linear-gradient(135deg,#e9f8ef,#fbfffc)!important;border-color:#b9e3ca!important}
+.netProfitCard span{color:#27805f}.netProfitCard strong{color:#146342}
+.qualityRow{margin-top:10px}
+.pageCounter{padding:8px 12px;background:#f2f5f3;border-radius:30px;font-size:11px;color:#66736c}
+.managementList{display:flex;flex-direction:column;gap:10px}
+.managementRow{display:flex;justify-content:space-between;align-items:center;gap:20px;border:1px solid #e2e7e4;border-radius:10px;padding:16px;background:#fff}
+.managementMain h3{margin:4px 0}.managementMain p{margin:7px 0;color:#626e67}
+.managementMain small,.managementMain span{font-size:10px;color:#89938e}
+.reviewStars{color:#bd8b20;letter-spacing:2px}
+.managementActions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.managementActions button,.managementActions select{border:1px solid #dbe1dd;border-radius:6px;padding:9px 11px;background:white}
+.managementActions .approveButton{background:#e7f7ed;color:#17794f;border-color:#c0e4ce}
+.managementActions .rejectButton{background:#fff0f1;color:#c23c47;border-color:#f0ccd0}
+.statusGreen,.statusYellow,.statusRed{font-size:10px;padding:6px 9px;border-radius:30px}
+.statusGreen{background:#e5f7ec;color:#17794f}.statusYellow{background:#fff7dd;color:#96700e}.statusRed{background:#ffedef;color:#c23c47}
+.reportCards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.reportCards>div{padding:18px;border:1px solid #e0e5e2;border-radius:9px;background:#fafcfb}
+.reportCards span,.reportCards strong{display:block}.reportCards span{font-size:10px;color:#78847d;margin-bottom:7px}.reportCards strong{font-size:23px}
+.reportCards .profitReport{background:#ebf8f0;border-color:#b9e3ca}.reportCards .profitReport strong{color:#147048}
+.reportRanks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.reportRank{padding:15px;border:1px solid #e0e5e2;border-radius:9px}
+.rankRow{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #eef1ef;padding:9px 0;font-size:11px}
+.rankEmpty{color:#89938e;font-size:11px}
+.settingsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}
+.settingsGrid label{font-size:10px;color:#67736d}.settingsGrid input{display:block;width:100%;margin-top:6px;padding:11px;border:1px solid #dce2df;border-radius:7px;background:#fff}
+.productionOrderLine{display:grid!important;grid-template-columns:110px 1fr auto!important;gap:14px!important;align-items:center;padding:13px!important;margin:8px 0;border:1px solid #e3e7e5!important;border-radius:9px}
+.orderProductPhoto{width:110px;height:90px;background:#eef1ef;border-radius:7px;overflow:hidden;display:grid;place-items:center;color:#919b95;font-size:9px}
+.orderProductPhoto img{width:100%;height:100%;object-fit:cover}
+.productionInfo{display:grid;grid-template-columns:repeat(4,minmax(100px,1fr));gap:10px}
+.productionInfo small{display:block;font-size:8px;color:#89938e;margin-bottom:4px}.productionInfo b{font-size:11px;display:block}
+.productionPrice{font-size:15px;white-space:nowrap}
+.backStatusButton{margin-right:auto;background:#fff!important;color:#56625c!important;border:1px solid #d9dfdb!important}
+@media(max-width:1000px){.reportCards{grid-template-columns:repeat(2,1fr)}.reportRanks{grid-template-columns:1fr}.productionInfo{grid-template-columns:repeat(2,1fr)}}

@@ -162,6 +162,10 @@ export default function App() {
     );
   },[cart]);
 
+  useEffect(()=>{
+    loadAuthUser();
+  },[authToken]);
+
   const filtered =
     useMemo(()=>{
       let list =
@@ -476,7 +480,8 @@ export default function App() {
           method:"POST",
 
           headers:{
-            "Content-Type":"application/json"
+            "Content-Type":"application/json",
+            ...(authToken ? {Authorization:`Bearer ${authToken}`} : {})
           },
 
           body:
@@ -498,6 +503,48 @@ export default function App() {
     setCart([]);
 
     await refreshProducts();
+  }
+
+  async function loadAuthUser(token=authToken) {
+    if(!token){setAuthUser(null);return}
+    try{
+      const res=await fetch(`${API}/api/auth/me`,{headers:{Authorization:`Bearer ${token}`}});
+      if(!res.ok){localStorage.removeItem("sheliva-token");setAuthToken("");setAuthUser(null);return}
+      setAuthUser(await res.json());
+    }catch{setAuthUser(null)}
+  }
+
+  async function loginUser(event) {
+    event.preventDefault();
+    const form=new FormData(event.currentTarget);
+    const res=await fetch(`${API}/api/auth/login`,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({login:form.get("login"),password:form.get("password")})
+    });
+    const data=await res.json();
+    if(!res.ok)return alert(data.error||"Giriş yapılamadı.");
+    localStorage.setItem("sheliva-token",data.token);
+    setAuthToken(data.token);setAuthUser(data.user);setAuthOpen(false);
+  }
+
+  async function registerUser(event) {
+    event.preventDefault();
+    const form=new FormData(event.currentTarget);
+    const res=await fetch(`${API}/api/auth/register-simple`,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name:form.get("name"),phone:form.get("phone"),email:form.get("email"),password:form.get("password")})
+    });
+    const data=await res.json();
+    if(!res.ok)return alert(data.error||"Hesap oluşturulamadı.");
+    localStorage.setItem("sheliva-token",data.token);
+    setAuthToken(data.token);setAuthUser(data.user);setAuthOpen(false);
+    alert("SHELİVA hesabın oluşturuldu.");
+  }
+
+  async function logoutUser() {
+    if(!window.confirm("Hesaptan çıkış yapılsın mı?"))return;
+    if(authToken){try{await fetch(`${API}/api/auth/logout`,{method:"POST",headers:{Authorization:`Bearer ${authToken}`}})}catch{}}
+    localStorage.removeItem("sheliva-token");setAuthToken("");setAuthUser(null);
   }
 
   if (loading) {
@@ -543,6 +590,13 @@ export default function App() {
               }
             />
           </div>
+
+          <button
+            className="headerAccount"
+            onClick={()=>authUser ? logoutUser() : setAuthOpen(true)}
+          >
+            {authUser ? authUser.name : "GİRİŞ / ÜYE OL"}
+          </button>
 
           <button
             className="headerCart"
@@ -912,7 +966,7 @@ export default function App() {
             <div className="detailInfo">
 
               <small>
-                {selected.code}
+                {selected.quality || "SHELİVA"}
               </small>
 
               <h1>
@@ -1077,6 +1131,62 @@ export default function App() {
           </section>
 
         </main>
+      )}
+
+      <footer className="siteFooter">
+        <div className="footerTop">
+          <section className="footerBrand">
+            <h2>SHELİVA</h2>
+            <p>Modern çizgiler, seçilmiş modeller ve detaylı üretim.</p>
+            <div className="socialLinks"><button>INSTAGRAM</button><button>TIKTOK</button><button>WHATSAPP</button></div>
+          </section>
+
+          <section>
+            <b>ALIŞVERİŞ</b>
+            <button onClick={()=>goHome("Yazlık")}>Yazlık</button>
+            <button onClick={()=>goHome("Kışlık")}>Kışlık</button>
+            <button onClick={()=>goHome("İndirimde")}>İndirimde</button>
+            <button onClick={()=>goHome("Son Gelenler")}>Son Gelenler</button>
+          </section>
+
+          <section><b>MÜŞTERİ</b><span>Sipariş Takibi</span><span>Kargo & Teslimat</span><span>İade / Değişim</span><span>Gizlilik</span></section>
+          <section><b>SHELİVA</b><span>Hakkımızda</span><span>İletişim</span><span>Üretim</span><span>Sık Sorulan Sorular</span></section>
+        </div>
+
+        <div className="footerBottom"><span>© 2026 SHELİVA</span><span>Güvenli alışveriş • Gerçek stok</span></div>
+      </footer>
+
+      {authOpen && (
+        <div className="authOverlay">
+          <div className="authModal">
+            <div className="authHead">
+              <div><small>SHELİVA</small><h2>{authMode==="login" ? "Giriş Yap" : "Üye Ol"}</h2></div>
+              <button onClick={()=>setAuthOpen(false)}>×</button>
+            </div>
+
+            <div className="authTabs">
+              <button className={authMode==="login"?"active":""} onClick={()=>setAuthMode("login")}>GİRİŞ</button>
+              <button className={authMode==="register"?"active":""} onClick={()=>setAuthMode("register")}>ÜYE OL</button>
+            </div>
+
+            {authMode==="login" ? (
+              <form className="authForm" onSubmit={loginUser}>
+                <label>Telefon veya E-posta<input name="login" required placeholder="05xx... veya e-posta"/></label>
+                <label>Şifre<input name="password" type="password" required placeholder="Şifren"/></label>
+                <button>GİRİŞ YAP</button>
+              </form>
+            ) : (
+              <form className="authForm" onSubmit={registerUser}>
+                <label>Ad Soyad<input name="name" required placeholder="Ad Soyad"/></label>
+                <label>Telefon<input name="phone" required placeholder="05xx xxx xx xx"/></label>
+                <label>E-posta<input name="email" type="email" required placeholder="mail@ornek.com"/></label>
+                <label>Şifre<input name="password" type="password" required minLength="6" placeholder="En az 6 karakter"/></label>
+                <div className="verifyLater">Telefon doğrulaması daha sonra SMS sistemine bağlanacak.</div>
+                <button>HESAP OLUŞTUR</button>
+              </form>
+            )}
+          </div>
+        </div>
       )}
 
       <div
@@ -1254,6 +1364,16 @@ export default function App() {
                 <h3>
                   Teslimat Bilgileri
                 </h3>
+
+                {!authUser && (
+                  <div className="guestCheckoutInfo">
+                    <div>
+                      <b>Üye olmadan devam edebilirsin.</b>
+                      <span>Hesap oluşturursan siparişlerini daha sonra hesabından takip edebilirsin.</span>
+                    </div>
+                    <button type="button" onClick={()=>setAuthOpen(true)}>ÜYE OL / GİRİŞ YAP</button>
+                  </div>
+                )}
 
                 <input
                   name="name"

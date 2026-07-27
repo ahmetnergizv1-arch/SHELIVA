@@ -42,6 +42,8 @@ function emptyProduct() {
     name:"",
     category:"Yazlık",
     description:"",
+    quality:"",
+    sole:"",
 
     price:0,
     discount:15,
@@ -345,6 +347,17 @@ export default function App() {
     status,
     extra={}
   ) {
+    const messages = {
+      "Hazırlanıyor":`${order.orderNo} siparişi HAZIRLAMAYA alınacak. Onaylıyor musun?`,
+      "Kargoya Verildi":`${order.orderNo} siparişi KARGOYA VERİLDİ olarak işaretlenecek. Onaylıyor musun?`,
+      "Teslim Edildi":`${order.orderNo} siparişi TESLİM EDİLDİ olarak işaretlenecek. Onaylıyor musun?`,
+      "İptal":`${order.orderNo} siparişi iptal edilecek. Onaylıyor musun?`
+    };
+
+    if(!window.confirm(messages[status] || `${order.orderNo} sipariş durumu değiştirilecek. Onaylıyor musun?`)){
+      return;
+    }
+
     const res =
       await fetch(
         `${API}/api/orders/${order.id}/status`,
@@ -370,6 +383,51 @@ export default function App() {
     }
 
     setSelectedOrder(null);
+    await refresh();
+  }
+
+  async function revertOrder(order) {
+    if(!window.confirm(`${order.orderNo} bir önceki duruma geri alınacak. Onaylıyor musun?`)) return;
+
+    const res = await fetch(`${API}/api/orders/${order.id}/revert`,{method:"POST"});
+    const data = await res.json();
+
+    if(!res.ok){
+      return alert(data.error || "Sipariş geri alınamadı.");
+    }
+
+    setSelectedOrder(null);
+    await refresh();
+  }
+
+  async function setReviewStatus(review,status) {
+    const res = await fetch(`${API}/api/reviews/${review.id}`,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({status})
+    });
+    if(!res.ok) return alert("Yorum güncellenemedi.");
+    await refresh();
+  }
+
+  async function setReturnStatus(item,status) {
+    const res = await fetch(`${API}/api/returns/${item.id}`,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({status})
+    });
+    if(!res.ok) return alert("İade güncellenemedi.");
+    await refresh();
+  }
+
+  async function saveSettings() {
+    const res = await fetch(`${API}/api/settings`,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(settings)
+    });
+    if(!res.ok) return alert("Ayarlar kaydedilemedi.");
+    alert("Ayarlar kaydedildi.");
     await refresh();
   }
 
@@ -436,7 +494,7 @@ export default function App() {
             icon="★"
             badge={
               reviews.filter(
-                r => !r.approved
+                r => r.status==="Bekliyor"
               ).length
             }
             onClick={()=>setPage("reviews")}
@@ -536,7 +594,6 @@ export default function App() {
 
             </section>
 
-            <div className="netProfitBar"><span>Toplam Net Kâr</span><strong>{money(metrics.netProfit||0)}</strong></div>
           <section className="finance">
 
               <div className="financeCard revenue">
@@ -546,10 +603,10 @@ export default function App() {
                 </strong>
               </div>
 
-              <div className="financeCard sales">
-                <span>Toplam Satış</span>
+              <div className="financeCard sales netProfitCard">
+                <span>Toplam Net Kâr</span>
                 <strong>
-                  {money(completedSales)}
+                  {money(metrics.netProfit || 0)}
                 </strong>
               </div>
 
@@ -1052,15 +1109,101 @@ export default function App() {
           </section>
         )}
 
-        {[
-          "reviews",
-          "returns",
-          "reports",
-          "settings"
-        ].includes(page) && (
+        {page==="reviews" && (
           <section className="pageCard">
-            <div className="emptyPage">
-              Bu bölüm sonraki aşamada geliştirilecek.
+            <div className="pageTitle">
+              <div><h2>Yorum Yönetimi</h2><p>Müşteri yorumlarını yayınlanmadan önce kontrol et.</p></div>
+              <b className="pageCounter">{reviews.filter(r=>r.status==="Bekliyor").length} bekliyor</b>
+            </div>
+
+            <div className="managementList">
+              {!reviews.length && <div className="emptyPage">Henüz yorum yok.</div>}
+              {reviews.map(review=>(
+                <article className="managementRow" key={review.id}>
+                  <div className="managementMain">
+                    <div className="reviewStars">{"★".repeat(Math.max(1,Math.min(5,n(review.rating))))}</div>
+                    <h3>{review.userName || "Müşteri"}</h3>
+                    <p>{review.text}</p>
+                    <small>{review.createdAt ? new Date(review.createdAt).toLocaleString("tr-TR") : "-"}</small>
+                  </div>
+                  <div className="managementActions">
+                    <b className={review.status==="Onaylandı" ? "statusGreen" : review.status==="Reddedildi" ? "statusRed" : "statusYellow"}>{review.status || "Bekliyor"}</b>
+                    {review.status!=="Onaylandı" && <button className="approveButton" onClick={()=>setReviewStatus(review,"Onaylandı")}>ONAYLA</button>}
+                    {review.status!=="Reddedildi" && <button className="rejectButton" onClick={()=>setReviewStatus(review,"Reddedildi")}>REDDET</button>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {page==="returns" && (
+          <section className="pageCard">
+            <div className="pageTitle">
+              <div><h2>İade Yönetimi</h2><p>İade taleplerini takip et ve durumlarını yönet.</p></div>
+              <b className="pageCounter">{returns.length} talep</b>
+            </div>
+
+            <div className="managementList">
+              {!returns.length && <div className="emptyPage">İade talebi yok.</div>}
+              {returns.map(item=>(
+                <article className="managementRow returnRow" key={item.id}>
+                  <div className="managementMain">
+                    <small>{item.orderNo}</small>
+                    <h3>{item.customerName || "Müşteri"}</h3>
+                    <p>{item.reason || "Sebep belirtilmedi."}</p>
+                    <span>{item.createdAt ? new Date(item.createdAt).toLocaleString("tr-TR") : "-"}</span>
+                  </div>
+                  <div className="managementActions">
+                    <select value={item.status || "Talep"} onChange={e=>setReturnStatus(item,e.target.value)}>
+                      <option>Talep</option><option>Onaylandı</option><option>Ürün Bekleniyor</option><option>Tamamlandı</option><option>Reddedildi</option>
+                    </select>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {page==="reports" && (
+          <section className="pageCard">
+            <div className="pageTitle"><div><h2>Satış Raporları</h2><p>Satış, stok, kârlılık ve müşteri hareketleri.</p></div></div>
+
+            <div className="reportCards">
+              <div><span>Toplam Ciro</span><strong>{money(metrics.grossRevenue || 0)}</strong></div>
+              <div className="profitReport"><span>Toplam Net Kâr</span><strong>{money(metrics.netProfit || 0)}</strong></div>
+              <div><span>Teslim Edilen</span><strong>{metrics.deliveredCount || 0}</strong></div>
+              <div><span>Satılan Çift</span><strong>{metrics.unitsSold || 0}</strong></div>
+              <div><span>Ortalama Sepet</span><strong>{money(metrics.averageOrder || 0)}</strong></div>
+              <div><span>İade Talebi</span><strong>{metrics.returnCount || 0}</strong></div>
+              <div><span>İade Oranı</span><strong>%{n(metrics.returnRate).toFixed(1)}</strong></div>
+              <div><span>Aktif Sipariş</span><strong>{metrics.activeOrders || 0}</strong></div>
+            </div>
+
+            <div className="reportRanks">
+              <ReportRank title="En Çok Satan Modeller" data={metrics.topModels}/>
+              <ReportRank title="En Çok Satan Renkler" data={metrics.topColors}/>
+              <ReportRank title="En Çok Satan Numaralar" data={metrics.topSizes}/>
+            </div>
+          </section>
+        )}
+
+        {page==="settings" && (
+          <section className="pageCard">
+            <div className="pageTitle">
+              <div><h2>SHELİVA Ayarları</h2><p>Mağaza ve sipariş ayarlarını tek yerden yönet.</p></div>
+              <button onClick={saveSettings}>AYARLARI KAYDET</button>
+            </div>
+
+            <div className="settingsGrid">
+              <label>Mağaza Adı<input value={settings.storeName || ""} onChange={e=>setSettings({...settings,storeName:e.target.value})}/></label>
+              <label>Destek Telefonu<input value={settings.supportPhone || ""} onChange={e=>setSettings({...settings,supportPhone:e.target.value})}/></label>
+              <label>Destek E-posta<input value={settings.supportEmail || ""} onChange={e=>setSettings({...settings,supportEmail:e.target.value})}/></label>
+              <label>Varsayılan KDV %<input type="number" value={settings.defaultVatRate ?? 20} onChange={e=>setSettings({...settings,defaultVatRate:n(e.target.value)})}/></label>
+              <label>Kargo Ücreti<input type="number" value={settings.cargoFee ?? 0} onChange={e=>setSettings({...settings,cargoFee:n(e.target.value)})}/></label>
+              <label>Ücretsiz Kargo Limiti<input type="number" value={settings.freeShippingThreshold ?? 2500} onChange={e=>setSettings({...settings,freeShippingThreshold:n(e.target.value)})}/></label>
+              <label>Sipariş Ön Eki<input value={settings.orderPrefix || "SH"} onChange={e=>setSettings({...settings,orderPrefix:e.target.value})}/></label>
+              <label>Üretim Fişi Ön Eki<input value={settings.ticketPrefix || "FIS"} onChange={e=>setSettings({...settings,ticketPrefix:e.target.value})}/></label>
             </div>
           </section>
         )}
@@ -1090,6 +1233,7 @@ export default function App() {
           cargoDraft={cargoDraft}
           setCargoDraft={setCargoDraft}
           changeStatus={changeOrderStatus}
+          revertOrder={revertOrder}
         />
       )}
 
@@ -1355,6 +1499,26 @@ function ProductModal({
                   </select>
                 </label>
 
+              </div>
+
+              <div className="two qualityRow">
+                <label>
+                  İş Kalitesi
+                  <input
+                    placeholder="Örn: A1 / 1. kalite / LUX"
+                    value={product.quality || ""}
+                    onChange={e=>setProduct({...product,quality:e.target.value})}
+                  />
+                </label>
+
+                <label>
+                  Taban
+                  <input
+                    placeholder="Örn: Eva taban / Kauçuk"
+                    value={product.sole || ""}
+                    onChange={e=>setProduct({...product,sole:e.target.value})}
+                  />
+                </label>
               </div>
 
               <label>
@@ -1734,7 +1898,8 @@ function OrderModal({
   close,
   cargoDraft,
   setCargoDraft,
-  changeStatus
+  changeStatus,
+  revertOrder
 }) {
   return (
     <div className="modalShade">
@@ -1820,25 +1985,52 @@ function OrderModal({
 
             {(order.items||[])
               .map(item => (
-                <div
-                  className="orderLine"
-                  key={item.key}
-                >
-                  <div>
-                    <b>{item.name}</b>
-                    <span>
-                      {item.colorName}
-                      {" • "}
-                      {item.size}
-                      {" • "}
-                      {item.qty} adet
-                    </span>
-                  </div>
+                <div className="orderLine productionOrderLine" key={item.key}>
+  <div className="orderProductPhoto">
+    {item.image ? (
+      <img
+        src={
+          item.image.startsWith("/uploads/")
+            ? API+item.image
+            : item.image
+        }
+      />
+    ) : (
+      <span>FOTOĞRAF</span>
+    )}
+  </div>
 
-                  <strong>
-                    {money(item.price*item.qty)}
-                  </strong>
-                </div>
+  <div className="productionInfo">
+    <div>
+      <small>İŞ KALİTESİ</small>
+      <b>{item.quality || "-"}</b>
+    </div>
+    <div>
+      <small>RENK</small>
+      <b>{item.colorName || "-"}</b>
+    </div>
+    <div>
+      <small>SİPARİŞ TARİHİ</small>
+      <b>{new Date(order.createdAt).toLocaleString("tr-TR")}</b>
+    </div>
+    <div>
+      <small>ADET</small>
+      <b>{item.qty} ÇİFT</b>
+    </div>
+    <div>
+      <small>TABANI</small>
+      <b>{item.sole || "-"}</b>
+    </div>
+    <div>
+      <small>NUMARASI</small>
+      <b>{item.size}</b>
+    </div>
+  </div>
+
+  <strong className="productionPrice">
+    {money(item.price*item.qty)}
+  </strong>
+</div>
               ))}
 
           </section>
@@ -1955,6 +2147,10 @@ function OrderModal({
 
         <div className="orderModalFooter">
 
+          {["Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].includes(order.status) && (
+            <button className="backStatusButton" onClick={()=>revertOrder(order)}>← GERİ AL</button>
+          )}
+
           {order.status==="Yeni" && (
             <button
               onClick={()=>
@@ -2012,3 +2208,18 @@ function OrderModal({
   );
 }
 
+
+function ReportRank({title,data=[]}) {
+  return (
+    <div className="reportRank">
+      <h3>{title}</h3>
+      {!data?.length && <p className="rankEmpty">Henüz yeterli veri yok.</p>}
+      {(data || []).map((item,index)=>(
+        <div className="rankRow" key={item.name}>
+          <span>{index+1}. {item.name}</span>
+          <b>{item.value}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
