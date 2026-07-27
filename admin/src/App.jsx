@@ -1,66 +1,2014 @@
-﻿import {useEffect,useMemo,useRef,useState} from "react";
-import {jsPDF} from "jspdf";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { jsPDF } from "jspdf";
 import "./App.css";
 
-const API="http://localhost:3001",SIZES=["36","37","38","39","40","41"],n=v=>Number(v||0);
-const money=v=>n(v).toLocaleString("tr-TR",{style:"currency",currency:"TRY"}),dt=v=>v?new Date(v).toLocaleString("tr-TR"):"-";
-const stock=p=>(p.colors||[]).reduce((s,c)=>s+Object.values(c.sizes||{}).reduce((a,v)=>a+n(v),0),0);
-const emptyColor=i=>({id:`CLR-${Date.now()}-${i}`,name:"",images:[],sizes:Object.fromEntries(SIZES.map(s=>[s,0]))});
-const emptyProduct=s=>({name:"",code:"",category:"Yazlık",description:"",quality:"",sole:"",price:0,discount:0,purchasePrice:0,vatRate:n(s.defaultVatRate??20),shippingCost:0,packagingCost:0,otherCost:0,active:true,newest:true,colors:[emptyColor(1)]});
+const API = "http://localhost:3001";
+const SIZES = ["36","37","38","39","40","41"];
 
-async function dataUrl(url){if(!url)return null;try{const u=url.startsWith("/uploads/")?API+url:url,b=await(await fetch(u)).blob();return await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)})}catch{return null}}
-async function pdfTicket(t){const d=new jsPDF({unit:"mm",format:"a4"});d.setFont("helvetica","bold");d.setFontSize(19);d.text("SHELIVA - URETIM FISI",18,18);d.setFontSize(10);d.text(t.ticketNo||"",160,18);const im=await dataUrl(t.image);if(im){try{d.addImage(im,"JPEG",18,27,58,58)}catch{}}const rows=[["Siparis",t.orderNo],["Is Kodu",t.productCode],["Kalite",t.quality],["Model",t.model],["Renk",t.color],["Taban",t.sole],["Numara",t.size],["Adet","1 CIFT"],["Musteri",t.customer?.name],["Telefon",t.customer?.phone],["Il / Ilce",`${t.customer?.city||""} / ${t.customer?.district||""}`],["Adres",t.customer?.address],["Kargo",t.cargoCompany],["Takip",t.cargoTracking]];let y=92;for(const[a,b]of rows){d.setFont("helvetica","bold");d.text(String(a)+":",18,y);d.setFont("helvetica","normal");const z=d.splitTextToSize(String(b||"-"),135);d.text(z,55,y);y+=Math.max(7,z.length*5)}d.save(`${t.ticketNo}.pdf`)}
+const n = v => Number(v || 0);
 
-export default function App(){
- const [page,setPage]=useState("dashboard"),[products,setProducts]=useState([]),[orders,setOrders]=useState([]),[reviews,setReviews]=useState([]),[returns,setReturns]=useState([]),[tickets,setTickets]=useState([]),[settings,setSettings]=useState({}),[metrics,setMetrics]=useState({}),[orderTab,setOrderTab]=useState("Yeni"),[editing,setEditing]=useState(null),[colorIndex,setColorIndex]=useState(0),[selectedOrder,setSelectedOrder]=useState(null),[confirm,setConfirm]=useState(null),[cargo,setCargo]=useState({company:"Yurtiçi Kargo",tracking:"",note:"",actualCargoCost:0}),[connected,setConnected]=useState(false);
- async function refresh(){try{const [p,o,r,re,t,s,m]=await Promise.all([fetch(`${API}/api/products`),fetch(`${API}/api/orders`),fetch(`${API}/api/reviews`),fetch(`${API}/api/returns`),fetch(`${API}/api/tickets`),fetch(`${API}/api/settings`),fetch(`${API}/api/metrics`)]);setProducts(await p.json());setOrders(await o.json());setReviews(await r.json());setReturns(await re.json());setTickets(await t.json());setSettings(await s.json());setMetrics(await m.json());setConnected(true)}catch{setConnected(false)}}
- useEffect(()=>{refresh();const t=setInterval(refresh,2000);return()=>clearInterval(t)},[]);
- const filtered=useMemo(()=>orders.filter(o=>o.status===orderTab),[orders,orderTab]);
- const ask=(title,text,run)=>setConfirm({title,text,run});
- async function status(o,s,extra={}){const r=await fetch(`${API}/api/orders/${o.id}/status`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:s,...extra})});if(!r.ok)return alert((await r.json()).error);setSelectedOrder(null);refresh()}
- async function revert(o){const r=await fetch(`${API}/api/orders/${o.id}/revert`,{method:"POST"});if(!r.ok)return alert((await r.json()).error);setSelectedOrder(null);refresh()}
- async function saveProduct(e){e.preventDefault();const exists=products.some(p=>n(p.id)===n(editing.id));const r=await fetch(exists?`${API}/api/products/${editing.id}`:`${API}/api/products`,{method:exists?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(editing)});if(!r.ok)return alert("Ürün kaydedilemedi.");setEditing(null);refresh()}
- async function reviewSet(r,status){await fetch(`${API}/api/reviews/${r.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});refresh()}
- async function returnSet(r,status){await fetch(`${API}/api/returns/${r.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});refresh()}
- async function saveSettings(){await fetch(`${API}/api/settings`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(settings)});alert("Ayarlar kaydedildi.");refresh()}
- async function print(t){await pdfTicket(t);await fetch(`${API}/api/tickets/${t.id}/printed`,{method:"PUT"});refresh()}
+const money = value =>
+  n(value).toLocaleString("tr-TR", {
+    style:"currency",
+    currency:"TRY"
+  });
 
- return <div className="app"><aside className="sidebar"><div className="logo">SHELİVA<small>YÖNETİM PANELİ</small></div><nav>{[["dashboard","Genel Bakış"],["orders","Siparişler"],["products","Ürünler"],["stock","Stok"],["shipping","Kargolar"],["tickets","Üretim Fişleri"],["media","Medya"],["customers","Müşteriler"],["reviews","Yorumlar"],["returns","İadeler"],["reports","Raporlar"],["settings","Ayarlar"]].map(([k,l])=><button key={k} className={page===k?"active":""} onClick={()=>setPage(k)}><i></i><span>{l}</span>{k==="orders"&&orders.filter(o=>o.status==="Yeni").length>0&&<b>{orders.filter(o=>o.status==="Yeni").length}</b>}</button>)}</nav></aside><main><header className="topbar"><div><small>SHELİVA PRO</small><h1>{page==="dashboard"?"Genel Bakış":page==="tickets"?"Üretim Fişleri":page.charAt(0).toUpperCase()+page.slice(1)}</h1></div><span className={connected?"online":"offline"}>{connected?"SERVER BAĞLI":"SERVER YOK"}</span></header>
-
- {page==="dashboard"&&<><section className="metrics">{[["Toplam Model",metrics.modelCount||0],["Toplam Stok",metrics.stockCount||0],["Aktif Sipariş",metrics.activeOrders||0],["Toplam Ciro",money(metrics.grossRevenue)],["Tamamlanan Satış",money(metrics.completedRevenue)],["Toplam Net Kâr",money(metrics.netProfit)]].map(([a,b],i)=><article className={i===5?"profit":""} key={a}><span>{a}</span><strong>{b}</strong></article>)}</section><section className="dashboardRows"><div className="panel"><h2>Yeni Siparişler</h2>{orders.filter(o=>o.status==="Yeni").slice(0,6).map(o=><button className="row" key={o.id} onClick={()=>setSelectedOrder(o)}><span>{o.orderNo}<small>{o.customer.name}</small></span><strong>{money(o.total)}</strong></button>)}</div><div className="panel"><h2>Acil Kargolar</h2>{orders.filter(o=>!["Kargoya Verildi","Teslim Edildi","İptal"].includes(o.status)&&Date.now()-new Date(o.createdAt).getTime()>3*86400000).map(o=><button className="row dangerRow" key={o.id} onClick={()=>setSelectedOrder(o)}><span>{o.orderNo}<small>{o.customer.name}</small></span><b>ACİL</b></button>)}</div></section></>}
-
- {page==="orders"&&<section className="panel"><div className="tabs">{["Yeni","Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].map(x=><button className={orderTab===x?"active":""} key={x} onClick={()=>setOrderTab(x)}>{x}<b>{orders.filter(o=>o.status===x).length}</b></button>)}</div><div className="orders">{filtered.map(o=><article key={o.id}><div className="head"><div><small>{o.orderNo}</small><h3>{o.customer.name}</h3></div><b>{o.status}</b></div><p>{dt(o.createdAt)} • {(o.items||[]).reduce((s,i)=>s+n(i.qty),0)} çift</p><div className="itemsMini">{(o.items||[]).slice(0,3).map(i=><span key={i.key}>{i.name} • {i.colorName} • {i.size} • {i.qty}</span>)}</div><footer><strong>{money(o.total)}</strong><button onClick={()=>setSelectedOrder(o)}>DETAY</button></footer></article>)}</div></section>}
-
- {page==="products"&&<section className="panel"><div className="sectionHead"><div><h2>Ürün Yönetimi</h2><p>Kod, kalite, taban, maliyet, fotoğraf ve stok.</p></div><button onClick={()=>{setEditing(emptyProduct(settings));setColorIndex(0)}}>+ YENİ ÜRÜN</button></div><div className="productCards">{products.map(p=><article key={p.id}><div className="prodImg">{p.image&&<img src={p.image.startsWith("/uploads/")?API+p.image:p.image}/>}</div><div><small>{p.code}</small><h3>{p.name}</h3><p>{p.quality||"Kalite yok"} • {p.sole||"Taban yok"} • {stock(p)} stok</p><strong>{money(p.salePrice??p.price)}</strong><button onClick={()=>{setEditing(JSON.parse(JSON.stringify(p)));setColorIndex(0)}}>DÜZENLE</button></div></article>)}</div></section>}
-
- {page==="stock"&&<section className="panel"><h2>Stok Yönetimi</h2>{products.map(p=><div className="stockBlock" key={p.id}><header><b>{p.name}</b><strong>{stock(p)} adet</strong></header>{(p.colors||[]).map(c=><div className="stockRow" key={c.id}><b>{c.name}</b>{SIZES.map(s=><span key={s}>{s}<strong>{n(c.sizes?.[s])}</strong></span>)}</div>)}</div>)}</section>}
-
- {page==="shipping"&&<section className="panel"><h2>Kargolar</h2><div className="shipping">{orders.filter(o=>["Hazırlanıyor","Kargoya Verildi"].includes(o.status)).map(o=><article key={o.id} onClick={()=>setSelectedOrder(o)}><div><small>{o.orderNo}</small><h3>{o.customer.name}</h3><p>{o.customer.city} / {o.customer.district}</p></div><div><b>{o.status}</b><span>{o.cargoCompany||"Firma seçilmedi"}</span><span>{o.cargoTracking||"Takip yok"}</span></div></article>)}</div></section>}
-
- {page==="tickets"&&<section className="panel"><div className="sectionHead"><div><h2>Son Üretim Fişleri</h2><p>Her çift için ayrı PDF.</p></div></div><div className="tickets">{tickets.map(t=><article key={t.id}><div>{t.image&&<img src={t.image.startsWith("/uploads/")?API+t.image:t.image}/>}</div><section><small>{t.ticketNo} • {t.orderNo}</small><h3>{t.model}</h3><p>{t.color} • {t.size} • 1 ÇİFT</p><span>{t.customer?.name}</span></section><aside><small>{t.printedAt?`Son PDF ${dt(t.printedAt)}`:"PDF alınmadı"}</small><button onClick={()=>print(t)}>PDF'E ÇIKART</button></aside></article>)}</div></section>}
-
- {page==="media"&&<section className="panel"><h2>Medya</h2><div className="media">{products.flatMap(p=>(p.colors||[]).flatMap(c=>(c.images||[]).map((image,i)=>({p,c,image,i})))).map((x,i)=><article key={i}><img src={x.image.startsWith("/uploads/")?API+x.image:x.image}/><b>{x.p.name}</b><span>{x.c.name} • Foto {x.i+1}</span></article>)}</div></section>}
-
- {page==="customers"&&<section className="panel"><h2>Müşteriler</h2><div className="table">{Array.from(new Map(orders.map(o=>[o.customer.phone,o.customer])).values()).map((c,i)=><div key={i}><b>{c.name}</b><span>{c.phone}</span><span>{c.email}</span><span>{c.city} / {c.district}</span></div>)}</div></section>}
-
- {page==="reviews"&&<section className="panel"><h2>Yorumlar</h2><div className="list">{reviews.map(r=><article key={r.id}><div><small>{r.userName}</small><h3>{"★".repeat(r.rating)}</h3><p>{r.text}</p></div><aside><b>{r.status}</b>{r.status==="Bekliyor"&&<><button onClick={()=>reviewSet(r,"Onaylandı")}>ONAYLA</button><button className="danger" onClick={()=>reviewSet(r,"Reddedildi")}>REDDET</button></>}</aside></article>)}</div></section>}
-
- {page==="returns"&&<section className="panel"><h2>İadeler</h2><div className="list">{returns.map(r=><article key={r.id}><div><small>{r.orderNo} • {r.customerName}</small><h3>{r.reason}</h3></div><select value={r.status} onChange={e=>returnSet(r,e.target.value)}><option>Talep</option><option>Onaylandı</option><option>Ürün Bekleniyor</option><option>Tamamlandı</option><option>Reddedildi</option></select></article>)}</div></section>}
-
- {page==="reports"&&<section className="panel"><h2>Raporlar</h2><section className="metrics compact">{[["Sipariş",metrics.orderCount],["Teslim Edildi",metrics.deliveredCount],["Satılan Çift",metrics.unitsSold],["Ort. Sepet",money(metrics.averageOrder)],["İade",metrics.returnCount],["İade Oranı",`%${n(metrics.returnRate).toFixed(1)}`],["Net Kâr",money(metrics.netProfit)]].map(([a,b])=><article key={a}><span>{a}</span><strong>{b||0}</strong></article>)}</section><div className="ranks"><Rank title="En Çok Satan Model" data={metrics.topModels}/><Rank title="Renk" data={metrics.topColors}/><Rank title="Numara" data={metrics.topSizes}/></div></section>}
-
- {page==="settings"&&<section className="panel"><div className="sectionHead"><h2>Ayarlar</h2><button onClick={saveSettings}>KAYDET</button></div><div className="settings">{[["storeName","Mağaza Adı"],["supportPhone","Destek Telefonu"],["supportEmail","Destek E-posta"],["defaultVatRate","Varsayılan KDV %"],["cargoFee","Kargo Ücreti"],["freeShippingThreshold","Ücretsiz Kargo Limiti"],["orderPrefix","Sipariş Prefix"],["ticketPrefix","Fiş Prefix"]].map(([k,l])=><label key={k}>{l}<input value={settings[k]??""} onChange={e=>setSettings({...settings,[k]:["defaultVatRate","cargoFee","freeShippingThreshold"].includes(k)?n(e.target.value):e.target.value})}/></label>)}</div></section>}
- </main>
-
- {editing&&<ProductModal p={editing} setP={setEditing} ci={colorIndex} setCi={setColorIndex} save={saveProduct} close={()=>setEditing(null)}/>}
- {selectedOrder&&<OrderModal o={selectedOrder} close={()=>setSelectedOrder(null)} cargo={cargo} setCargo={setCargo} ask={ask} status={status} revert={revert} tickets={tickets.filter(t=>n(t.orderId)===n(selectedOrder.id))} print={print}/>}
- {confirm&&<div className="overlay"><div className="confirm"><h2>{confirm.title}</h2><p>{confirm.text}</p><footer><button onClick={()=>setConfirm(null)}>VAZGEÇ</button><button onClick={async()=>{const x=confirm;setConfirm(null);await x.run()}}>ONAYLA</button></footer></div></div>}
- </div>
+function totalStock(product) {
+  return (product.colors || []).reduce(
+    (sum,color) =>
+      sum +
+      Object.values(color.sizes || {})
+        .reduce(
+          (s,v) => s + n(v),
+          0
+        ),
+    0
+  );
 }
 
-function ProductModal({p,setP,ci,setCi,save,close}){const refs=useRef([]),c=p.colors?.[ci];function up(patch){const cs=[...p.colors];cs[ci]={...cs[ci],...patch};setP({...p,colors:cs})}function files(e){Promise.all(Array.from(e.target.files||[]).map(f=>new Promise(r=>{const x=new FileReader();x.onload=()=>r({data:x.result,name:f.name});x.readAsDataURL(f)}))).then(xs=>up({images:[...(c.images||[]),...xs]}))}return <div className="overlay"><form className="productModal" onSubmit={save}><header><h2>{p.id?"Ürün Düzenle":"Yeni Ürün"}</h2><button type="button" onClick={close}>×</button></header><main><section><div className="two"><label>Ürün Adı<input value={p.name} onChange={e=>setP({...p,name:e.target.value})}/></label><label>İş Kodu<input value={p.code||""} onChange={e=>setP({...p,code:e.target.value})}/></label></div><div className="three"><label>Kategori<select value={p.category} onChange={e=>setP({...p,category:e.target.value})}><option>Yazlık</option><option>Kışlık</option></select></label><label>Kalite<input value={p.quality||""} onChange={e=>setP({...p,quality:e.target.value})}/></label><label>Taban<input value={p.sole||""} onChange={e=>setP({...p,sole:e.target.value})}/></label></div><label>Açıklama<textarea value={p.description||""} onChange={e=>setP({...p,description:e.target.value})}/></label><h3>Fiyat & Maliyet</h3><div className="costs">{[["price","Liste Fiyatı"],["discount","İndirim %"],["purchasePrice","Alış Fiyatı"],["vatRate","KDV %"],["shippingCost","Kargo Maliyeti"],["packagingCost","Paketleme"],["otherCost","Diğer Gider"]].map(([k,l])=><label key={k}>{l}<input type="number" value={p[k]||0} onChange={e=>setP({...p,[k]:n(e.target.value)})}/></label>)}</div></section><section><div className="sectionHead"><h3>Renk / Fotoğraf / Stok</h3><button type="button" onClick={()=>{const cs=[...p.colors,emptyColor(p.colors.length+1)];setP({...p,colors:cs});setCi(cs.length-1)}}>+ RENK</button></div><div className="colorTabs">{p.colors.map((x,i)=><button type="button" key={x.id} className={ci===i?"active":""} onClick={()=>setCi(i)}>{x.name||`Renk ${i+1}`}</button>)}</div>{c&&<><div className="colorTools"><input placeholder="Renk adı" value={c.name} onChange={e=>up({name:e.target.value})}/><label>+ FOTOĞRAF<input type="file" hidden multiple accept="image/*" onChange={files}/></label></div><div className="images">{(c.images||[]).map((x,i)=>{const u=x?.data||x;return <div key={i}><img src={u?.startsWith?.("/uploads/")?API+u:u}/></div>})}</div><div className="sizeInputs">{SIZES.map((s,i)=><label key={s}>{s}<input ref={el=>refs.current[i]=el} type="number" value={c.sizes?.[s]||0} onKeyDown={e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();refs.current[i+1]?.focus();refs.current[i+1]?.select()}}} onChange={e=>up({sizes:{...c.sizes,[s]:Math.max(0,n(e.target.value))}})}/></label>)}</div></>}</section></main><footer><button type="button" onClick={close}>İPTAL</button><button>KAYDET</button></footer></form></div>}
+function emptyColor(index=1) {
+  return {
+    id:`CLR-${Date.now()}-${index}`,
+    name:"",
+    images:[],
+    sizes:Object.fromEntries(
+      SIZES.map(size => [size,0])
+    )
+  };
+}
 
-function OrderModal({o,close,cargo,setCargo,ask,status,revert,tickets,print}){return <div className="overlay"><div className="orderModal"><header><div><small>{o.orderNo}</small><h2>Sipariş Detayı</h2></div><button onClick={close}>×</button></header><main><div className="statusBar"><b>{o.status}</b><span>{dt(o.createdAt)}</span><span>{(o.items||[]).reduce((s,i)=>s+n(i.qty),0)} çift</span></div><section><h3>Müşteri & Teslimat</h3><div className="infoGrid"><Info l="Ad Soyad" v={o.customer.name}/><Info l="Telefon" v={o.customer.phone}/><Info l="E-posta" v={o.customer.email}/><Info l="Kaynak" v={o.source}/><Info l="İl / İlçe" v={`${o.customer.city} / ${o.customer.district}`}/><Info l="Mahalle" v={o.customer.neighborhood}/><Info l="Adres" v={o.customer.address} wide/></div></section><section><h3>Ürünler</h3>{(o.items||[]).map(i=><div className="detailItem" key={i.key}><div>{i.image&&<img src={i.image.startsWith("/uploads/")?API+i.image:i.image}/>}</div><span><b>{i.name}</b><small>Kod {i.code||"-"} • Kalite {i.quality||"-"} • Taban {i.sole||"-"}</small><small>{i.colorName} • {i.size} • {i.qty} çift</small></span><strong>{money(i.price*i.qty)}</strong></div>)}</section><section><h3>Durum Geçmişi</h3>{(o.statusHistory||[]).map((h,i)=><div className="history" key={i}><i></i><b>{h.status}</b><span>{dt(h.at)} {h.reverted?"• geri alındı":""}</span></div>)}</section>{o.status==="Hazırlanıyor"&&<section><h3>Kargo Çıkışı</h3><div className="cargo"><select value={cargo.company} onChange={e=>setCargo({...cargo,company:e.target.value})}><option>Yurtiçi Kargo</option><option>Aras Kargo</option><option>MNG Kargo</option><option>Sürat Kargo</option><option>PTT Kargo</option></select><input placeholder="Takip kodu" value={cargo.tracking} onChange={e=>setCargo({...cargo,tracking:e.target.value})}/><input type="number" placeholder="Gerçek kargo maliyeti" value={cargo.actualCargoCost} onChange={e=>setCargo({...cargo,actualCargoCost:n(e.target.value)})}/></div></section>}<section><h3>Üretim Fişleri</h3><div className="ticketButtons">{tickets.map(t=><button key={t.id} onClick={()=>print(t)}>{t.ticketNo}<small>{t.color} • {t.size}</small></button>)}</div></section></main><footer>{["Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].includes(o.status)&&<button onClick={()=>ask("Geri al",`${o.orderNo} önceki duruma dönecek.`,()=>revert(o))}>← ÖNCEKİ DURUMA AL</button>}{o.status==="Yeni"&&<button onClick={()=>ask("Hazırlamaya al",`${o.orderNo} Hazırlanıyor durumuna geçecek.`,()=>status(o,"Hazırlanıyor"))}>HAZIRLAMAYA AL</button>}{o.status==="Hazırlanıyor"&&<button onClick={()=>ask("Kargoya ver",`${o.orderNo} kargoya verilecek.`,()=>status(o,"Kargoya Verildi",{cargoCompany:cargo.company,cargoTracking:cargo.tracking,actualCargoCost:cargo.actualCargoCost}))}>KARGOYA VER</button>}{o.status==="Kargoya Verildi"&&<button onClick={()=>ask("Teslim edildi",`${o.orderNo} teslim edildi olacak.`,()=>status(o,"Teslim Edildi"))}>TESLİM EDİLDİ</button>}</footer></div></div>}
+function emptyProduct() {
+  return {
+    name:"",
+    category:"Yazlık",
+    description:"",
 
-function Info({l,v,wide}){return <div className={wide?"info wide":"info"}><span>{l}</span><b>{v||"-"}</b></div>}
-function Rank({title,data=[]}){return <div className="rank"><h3>{title}</h3>{data.map((x,i)=><p key={x.name}><span>{i+1}. {x.name}</span><b>{x.value}</b></p>)}</div>}
+    price:0,
+    discount:15,
+
+    purchasePrice:0,
+    vatRate:20,
+    shippingCost:0,
+    packagingCost:0,
+    otherCost:0,
+
+    active:true,
+    newest:true,
+    featured:false,
+
+    colors:[emptyColor(1)]
+  };
+}
+
+function calculate(product) {
+  const list = n(product.price);
+  const discount =
+    Math.max(
+      0,
+      Math.min(100,n(product.discount))
+    );
+
+  const sale =
+    list * (1 - discount / 100);
+
+  const vat =
+    n(product.purchasePrice) *
+    n(product.vatRate) /
+    100;
+
+  const totalCost =
+    n(product.purchasePrice) +
+    vat +
+    n(product.shippingCost) +
+    n(product.packagingCost) +
+    n(product.otherCost);
+
+  return {
+    sale,
+    vat,
+    totalCost,
+    profit:sale-totalCost
+  };
+}
+
+export default function App() {
+  const [tickets,setTickets] = useState([]);
+  const [returns,setReturns] = useState([]);
+  const [settings,setSettings] = useState({});
+  const [metrics,setMetrics] = useState({});
+  const [page,setPage] =
+    useState("dashboard");
+
+  const [products,setProducts] =
+    useState([]);
+
+  const [orders,setOrders] =
+    useState([]);
+
+  const [reviews,setReviews] =
+    useState([]);
+
+  const [connected,setConnected] =
+    useState(false);
+
+  const [orderTab,setOrderTab] =
+    useState("Yeni");
+
+  const [editing,setEditing] =
+    useState(null);
+
+  const [modalOpen,setModalOpen] =
+    useState(false);
+
+  const [activeColorIndex,setActiveColorIndex] =
+    useState(0);
+
+  const [selectedOrder,setSelectedOrder] =
+    useState(null);
+
+  const [cargoDraft,setCargoDraft] =
+    useState({
+      company:"Yurtiçi Kargo",
+      tracking:"",
+      note:""
+    });
+
+  async function refresh() {
+    try {
+      const [p,o,r] =
+        await Promise.all([
+          fetch(`${API}/api/products`),
+          fetch(`${API}/api/orders`),
+          fetch(`${API}/api/reviews`)
+        ]);
+
+      if (!p.ok || !o.ok || !r.ok) {
+        throw new Error();
+      }
+
+      setProducts(await p.json());
+      setOrders(await o.json());
+      setReviews(await r.json());
+
+      try {
+        const [tt,rr,ss,mm]=await Promise.all([fetch(`${API}/api/tickets`),fetch(`${API}/api/returns`),fetch(`${API}/api/settings`),fetch(`${API}/api/metrics`)]);
+        if(tt.ok)setTickets(await tt.json()); if(rr.ok)setReturns(await rr.json()); if(ss.ok)setSettings(await ss.json()); if(mm.ok)setMetrics(await mm.json());
+      } catch {}
+      setConnected(true);
+    } catch {
+      setConnected(false);
+    }
+  }
+
+  useEffect(()=>{
+    refresh();
+
+    const timer =
+      setInterval(refresh,2000);
+
+    return () =>
+      clearInterval(timer);
+  },[]);
+
+  const activeOrders =
+    orders.filter(
+      o =>
+        ![
+          "Teslim Edildi",
+          "İptal"
+        ].includes(o.status)
+    );
+
+  const newOrders =
+    orders.filter(
+      o => o.status==="Yeni"
+    );
+
+  const revenue =
+    orders
+      .filter(
+        o => o.status!=="İptal"
+      )
+      .reduce(
+        (s,o) => s+n(o.total),
+        0
+      );
+
+  const completedSales =
+    orders
+      .filter(
+        o => o.status==="Teslim Edildi"
+      )
+      .reduce(
+        (s,o) => s+n(o.total),
+        0
+      );
+
+  const urgentOrders =
+    orders.filter(order => {
+      if (
+        [
+          "Teslim Edildi",
+          "Kargoya Verildi",
+          "İptal"
+        ].includes(order.status)
+      ) {
+        return false;
+      }
+
+      return (
+        Date.now() -
+        new Date(order.createdAt).getTime()
+      ) >= 3*86400000;
+    });
+
+  const filteredOrders =
+    useMemo(
+      () =>
+        orders.filter(
+          o => o.status===orderTab
+        ),
+      [orders,orderTab]
+    );
+
+  function openNewProduct() {
+    setEditing(emptyProduct());
+    setActiveColorIndex(0);
+    setModalOpen(true);
+  }
+
+  function openEditProduct(product) {
+    const clone =
+      JSON.parse(
+        JSON.stringify(product)
+      );
+
+    clone.colors =
+      (clone.colors || []).map(
+        color => ({
+          ...color,
+          images:
+            color.images?.length
+              ? color.images
+              : color.image
+                ? [color.image]
+                : []
+        })
+      );
+
+    setEditing(clone);
+    setActiveColorIndex(0);
+    setModalOpen(true);
+  }
+
+  async function saveProduct(event) {
+    event.preventDefault();
+
+    if (!editing?.name?.trim()) {
+      return alert("Ürün adı gerekli.");
+    }
+
+    if (!editing.colors?.length) {
+      return alert("En az 1 renk gerekli.");
+    }
+
+    if (
+      editing.colors.some(
+        c => !c.name?.trim()
+      )
+    ) {
+      return alert("Renk adı boş olamaz.");
+    }
+
+    const exists =
+      products.some(
+        p =>
+          Number(p.id) ===
+          Number(editing.id)
+      );
+
+    const url =
+      exists
+        ? `${API}/api/products/${editing.id}`
+        : `${API}/api/products`;
+
+    const res =
+      await fetch(url,{
+        method:
+          exists
+            ? "PUT"
+            : "POST",
+
+        headers:{
+          "Content-Type":"application/json"
+        },
+
+        body:
+          JSON.stringify(editing)
+      });
+
+    const data =
+      await res.json();
+
+    if (!res.ok) {
+      return alert(
+        data.error ||
+        "Ürün kaydedilemedi."
+      );
+    }
+
+    setModalOpen(false);
+    setEditing(null);
+
+    await refresh();
+  }
+
+  async function deleteProduct(product) {
+    if (
+      !confirm(
+        `${product.name} silinsin mi?`
+      )
+    ) {
+      return;
+    }
+
+    await fetch(
+      `${API}/api/products/${product.id}`,
+      {method:"DELETE"}
+    );
+
+    await refresh();
+  }
+
+  async function changeOrderStatus(
+    order,
+    status,
+    extra={}
+  ) {
+    const res =
+      await fetch(
+        `${API}/api/orders/${order.id}/status`,
+        {
+          method:"PUT",
+
+          headers:{
+            "Content-Type":"application/json"
+          },
+
+          body:
+            JSON.stringify({
+              status,
+              ...extra
+            })
+        }
+      );
+
+    if (!res.ok) {
+      return alert(
+        "Sipariş güncellenemedi."
+      );
+    }
+
+    setSelectedOrder(null);
+    await refresh();
+  }
+
+  return (
+    <div className="app">
+
+      <aside className="sidebar">
+
+        <div className="logo">
+          SHELİVA
+          <small>
+            YÖNETİM PANELİ
+          </small>
+        </div>
+
+        <nav>
+
+          <Menu
+            active={page==="dashboard"}
+            label="Genel Bakış"
+            icon="⌂"
+            onClick={()=>setPage("dashboard")}
+          />
+
+          <Menu
+            active={page==="orders"}
+            label="Siparişler"
+            icon="▣"
+            badge={newOrders.length}
+            onClick={()=>setPage("orders")}
+          />
+
+          <Menu
+            active={page==="products"}
+            label="Ürünler"
+            icon="◇"
+            onClick={()=>setPage("products")}
+          />
+
+          <Menu
+            active={page==="stock"}
+            label="Stok"
+            icon="▤"
+            onClick={()=>setPage("stock")}
+          />
+
+          <Menu
+            active={page==="shipping"}
+            label="Kargolar"
+            icon="▰"
+            onClick={()=>setPage("shipping")}
+          />
+
+          <Menu
+            active={page==="customers"}
+            label="Müşteriler"
+            icon="♙"
+            onClick={()=>setPage("customers")}
+          />
+
+          <Menu
+            active={page==="reviews"}
+            label="Yorumlar"
+            icon="★"
+            badge={
+              reviews.filter(
+                r => !r.approved
+              ).length
+            }
+            onClick={()=>setPage("reviews")}
+          />
+
+          <Menu
+            active={page==="returns"}
+            label="İadeler"
+            icon="↩"
+            onClick={()=>setPage("returns")}
+          />
+
+          <Menu
+            active={page==="reports"}
+            label="Raporlar"
+            icon="⌁"
+            onClick={()=>setPage("reports")}
+          />
+
+          <Menu
+            active={page==="settings"}
+            label="Ayarlar"
+            icon="⚙"
+            onClick={()=>setPage("settings")}
+          />
+
+        </nav>
+
+      </aside>
+
+      <main>
+
+        <header className="topbar">
+
+          <div>
+            <small>SHELİVA</small>
+
+            <h1>
+              {{
+                dashboard:"Genel Bakış",
+                orders:"Siparişler",
+                products:"Ürünler",
+                stock:"Stok Yönetimi",
+                shipping:"Kargolar",tickets:"Üretim Fişleri",media:"Medya",
+                customers:"Müşteriler",
+                reviews:"Yorumlar",
+                returns:"İadeler",
+                reports:"Raporlar",
+                settings:"Ayarlar"
+              }[page]}
+            </h1>
+          </div>
+
+          <div
+            className={
+              connected
+                ? "server connected"
+                : "server"
+            }
+          >
+            <i></i>
+
+            {connected
+              ? "SERVER BAĞLI"
+              : "SERVER BAĞLANTISI YOK"}
+          </div>
+
+        </header>
+
+        {page==="dashboard" && (
+          <>
+            <section className="stats">
+
+              <Stat
+                label="Toplam Model Sayısı"
+                value={products.length}
+                icon="◇"
+              />
+
+              <Stat
+                label="Toplam Ürün Adeti"
+                value={
+                  products.reduce(
+                    (s,p) =>
+                      s+totalStock(p),
+                    0
+                  )
+                }
+                icon="▣"
+              />
+
+              <Stat
+                label="Toplam Aktif Siparişler"
+                value={activeOrders.length}
+                icon="▤"
+              />
+
+            </section>
+
+            <div className="netProfitBar"><span>Toplam Net Kâr</span><strong>{money(metrics.netProfit||0)}</strong></div>
+          <section className="finance">
+
+              <div className="financeCard revenue">
+                <span>Toplam Ciro</span>
+                <strong>
+                  {money(revenue)}
+                </strong>
+              </div>
+
+              <div className="financeCard sales">
+                <span>Toplam Satış</span>
+                <strong>
+                  {money(completedSales)}
+                </strong>
+              </div>
+
+            </section>
+
+            <section className="dashboardBottom">
+
+              <div className="newOrdersCard">
+
+                <div className="cardTitle">
+                  <div>
+                    <h2>Yeni Siparişler</h2>
+                    <p>Onay bekleyen siparişler</p>
+                  </div>
+
+                  <button
+                    onClick={()=>{
+                      setOrderTab("Yeni");
+                      setPage("orders");
+                    }}
+                  >
+                    Tümünü Gör →
+                  </button>
+                </div>
+
+                {!newOrders.length ? (
+                  <div className="noOrders">
+                    Yeni sipariş yok.
+                  </div>
+                ) : (
+                  newOrders
+                    .slice(0,5)
+                    .map(order => (
+                      <div
+                        className="dashboardOrder"
+                        key={order.id}
+                        onClick={()=>
+                          setSelectedOrder(order)
+                        }
+                      >
+                        <b>{order.orderNo}</b>
+                        <span>{order.customer.name}</span>
+                        <span>{order.items?.[0]?.name}</span>
+                        <strong>{money(order.total)}</strong>
+                      </div>
+                    ))
+                )}
+
+              </div>
+
+              <div className="urgentCard">
+
+                <div className="urgentTitle">
+                  <div>
+                    <h2>
+                      ⚠ Acil Kargoya Verilecekler
+                    </h2>
+                    <p>3 günü geçenler</p>
+                  </div>
+
+                  <b>
+                    {urgentOrders.length}
+                  </b>
+                </div>
+
+                {!urgentOrders.length ? (
+                  <div className="urgentEmpty">
+                    Acil sipariş yok.
+                  </div>
+                ) : (
+                  urgentOrders.map(
+                    order => (
+                      <div
+                        className="urgentItem"
+                        key={order.id}
+                        onClick={()=>
+                          setSelectedOrder(order)
+                        }
+                      >
+                        <div>
+                          <b>{order.orderNo}</b>
+                          <span>{order.customer.name}</span>
+                        </div>
+
+                        <strong>ACİL</strong>
+                      </div>
+                    )
+                  )
+                )}
+
+              </div>
+
+            </section>
+          </>
+        )}
+
+        {page==="orders" && (
+          <section className="pageCard">
+
+            <div className="orderTabs">
+
+              {[
+                "Yeni",
+                "Hazırlanıyor",
+                "Kargoya Verildi",
+                "Teslim Edildi"
+              ].map(status => (
+                <button
+                  key={status}
+                  className={
+                    orderTab===status
+                      ? "active"
+                      : ""
+                  }
+                  onClick={()=>
+                    setOrderTab(status)
+                  }
+                >
+                  {status}
+
+                  <b>
+                    {
+                      orders.filter(
+                        o =>
+                          o.status===status
+                      ).length
+                    }
+                  </b>
+                </button>
+              ))}
+
+            </div>
+
+            <div className="orderCards">
+
+              {filteredOrders.map(
+                order => (
+                  <article
+                    className="orderCard"
+                    key={order.id}
+                  >
+
+                    <div className="orderTop">
+                      <div>
+                        <small>SİPARİŞ</small>
+                        <h3>{order.orderNo}</h3>
+                      </div>
+
+                      <em>{order.status}</em>
+                    </div>
+
+                    <div className="orderInfo">
+
+                      <label>
+                        Müşteri
+                        <b>{order.customer.name}</b>
+                      </label>
+
+                      <label>
+                        Kaynak
+                        <b>
+                          {order.source || "SHELIVA Web"}
+                        </b>
+                      </label>
+
+                    </div>
+
+                    <div className="orderedProducts">
+
+                      {(order.items||[])
+                        .map(item => (
+                          <div key={item.key}>
+                            <span>{item.name}</span>
+                            <small>
+                              {item.colorName}
+                              {" • "}
+                              {item.size}
+                              {" • "}
+                              {item.qty} adet
+                            </small>
+                          </div>
+                        ))}
+
+                    </div>
+
+                    <div className="orderBottom">
+                      <strong>
+                        {money(order.total)}
+                      </strong>
+
+                      <button
+                        onClick={()=>
+                          setSelectedOrder(order)
+                        }
+                      >
+                        DETAY
+                      </button>
+                    </div>
+
+                  </article>
+                )
+              )}
+
+              {!filteredOrders.length && (
+                <div className="emptyPage">
+                  Bu durumda sipariş yok.
+                </div>
+              )}
+
+            </div>
+
+          </section>
+        )}
+
+        {page==="products" && (
+          <section className="pageCard">
+
+            <div className="pageTitle">
+
+              <div>
+                <h2>Ürünler</h2>
+                <p>
+                  Detaylı ürün, maliyet,
+                  varyant ve fotoğraf yönetimi.
+                </p>
+              </div>
+
+              <button onClick={openNewProduct}>
+                + YENİ ÜRÜN
+              </button>
+
+            </div>
+
+            <div className="productManagerGrid">
+
+              {products.map(
+                product => (
+                  <article
+                    className="managerProduct"
+                    key={product.id}
+                  >
+
+                    <div className="managerImage">
+
+                      {product.image ? (
+                        <img
+                          src={
+                            product.image.startsWith("/uploads/")
+                              ? API+product.image
+                              : product.image
+                          }
+                        />
+                      ) : (
+                        <span>
+                          FOTOĞRAF YOK
+                        </span>
+                      )}
+
+                    </div>
+
+                    <div className="managerInfo">
+
+                      <small>
+                        {product.code}
+                      </small>
+
+                      <h3>
+                        {product.name}
+                      </h3>
+
+                      <p>
+                        {product.category}
+                        {" • "}
+                        {totalStock(product)} stok
+                      </p>
+
+                      <div className="pricePair">
+                        {n(product.discount)>0 && (
+                          <del>
+                            {money(product.price)}
+                          </del>
+                        )}
+
+                        <strong>
+                          {money(
+                            product.salePrice ??
+                            product.price
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="miniCost">
+                        <span>
+                          Maliyet {money(product.totalCost)}
+                        </span>
+
+                        <span>
+                          Brüt fark {money(product.grossProfit)}
+                        </span>
+                      </div>
+
+                      <div className="managerActions">
+
+                        <button
+                          onClick={()=>
+                            openEditProduct(product)
+                          }
+                        >
+                          DÜZENLE
+                        </button>
+
+                        <button
+                          className="danger"
+                          onClick={()=>
+                            deleteProduct(product)
+                          }
+                        >
+                          SİL
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  </article>
+                )
+              )}
+
+            </div>
+
+          </section>
+        )}
+
+        {page==="stock" && (
+          <section className="pageCard">
+
+            <div className="pageTitle">
+              <div>
+                <h2>Stok Yönetimi</h2>
+                <p>Renk + numara bazında stok.</p>
+              </div>
+            </div>
+
+            {products.map(
+              product => (
+                <div
+                  className="stockProductCard"
+                  key={product.id}
+                >
+
+                  <div className="stockProductTitle">
+                    <div>
+                      <h3>{product.name}</h3>
+                      <span>{product.code}</span>
+                    </div>
+
+                    <strong>
+                      {totalStock(product)} adet
+                    </strong>
+                  </div>
+
+                  {(product.colors||[])
+                    .map(color => (
+                      <div
+                        className="stockColor"
+                        key={color.id}
+                      >
+                        <b>{color.name}</b>
+
+                        <div className="stockSizes">
+                          {SIZES.map(size => (
+                            <div
+                              className="stockSize"
+                              key={size}
+                            >
+                              <span>{size}</span>
+                              <strong>
+                                {n(color.sizes?.[size])}
+                              </strong>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                  <button
+                    className="editStock"
+                    onClick={()=>
+                      openEditProduct(product)
+                    }
+                  >
+                    STOK DÜZENLE
+                  </button>
+
+                </div>
+              )
+            )}
+
+          </section>
+        )}
+
+        {page==="shipping" && (
+          <section className="pageCard">
+
+            <div className="pageTitle">
+              <div>
+                <h2>Kargolar</h2>
+                <p>
+                  Hazırlanan ve kargoya çıkan siparişler.
+                </p>
+              </div>
+            </div>
+
+            <div className="shippingGrid">
+
+              {orders
+                .filter(
+                  o =>
+                    [
+                      "Hazırlanıyor",
+                      "Kargoya Verildi"
+                    ].includes(o.status)
+                )
+                .map(order => (
+                  <article
+                    className="shippingCard"
+                    key={order.id}
+                    onClick={()=>
+                      setSelectedOrder(order)
+                    }
+                  >
+                    <div>
+                      <small>{order.orderNo}</small>
+                      <h3>{order.customer.name}</h3>
+                      <p>
+                        {order.customer.city}
+                        {" / "}
+                        {order.customer.district}
+                      </p>
+                    </div>
+
+                    <div>
+                      <b>{order.status}</b>
+                      <span>
+                        {order.cargoCompany || "Kargo seçilmedi"}
+                      </span>
+                      <span>
+                        {order.cargoTracking || "Takip kodu yok"}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+
+            </div>
+
+          </section>
+        )}
+
+        {page==="customers" && (
+          <section className="pageCard">
+
+            <div className="pageTitle">
+              <div>
+                <h2>Müşteriler</h2>
+                <p>
+                  Siparişlerden oluşan müşteri listesi.
+                </p>
+              </div>
+            </div>
+
+            <div className="customerTable">
+
+              {Array.from(
+                new Map(
+                  orders.map(
+                    o => [
+                      o.customer.phone,
+                      o.customer
+                    ]
+                  )
+                ).values()
+              ).map((customer,index) => (
+                <div
+                  className="customerRow"
+                  key={index}
+                >
+                  <b>{customer.name}</b>
+                  <span>{customer.phone}</span>
+                  <span>{customer.email}</span>
+                  <span>
+                    {customer.city}
+                    {" / "}
+                    {customer.district}
+                  </span>
+                </div>
+              ))}
+
+            </div>
+
+          </section>
+        )}
+
+        {[
+          "reviews",
+          "returns",
+          "reports",
+          "settings"
+        ].includes(page) && (
+          <section className="pageCard">
+            <div className="emptyPage">
+              Bu bölüm sonraki aşamada geliştirilecek.
+            </div>
+          </section>
+        )}
+
+      </main>
+
+      {modalOpen && editing && (
+        <ProductModal
+          product={editing}
+          setProduct={setEditing}
+          activeColorIndex={activeColorIndex}
+          setActiveColorIndex={setActiveColorIndex}
+          save={saveProduct}
+          close={()=>{
+            setModalOpen(false);
+            setEditing(null);
+          }}
+        />
+      )}
+
+      {selectedOrder && (
+        <OrderModal
+          order={selectedOrder}
+          close={()=>
+            setSelectedOrder(null)
+          }
+          cargoDraft={cargoDraft}
+          setCargoDraft={setCargoDraft}
+          changeStatus={changeOrderStatus}
+        />
+      )}
+
+    </div>
+  );
+}
+
+function Menu({
+  active,
+  label,
+  icon,
+  badge,
+  onClick
+}) {
+  return (
+    <button
+      className={
+        active ? "active" : ""
+      }
+      onClick={onClick}
+    >
+      <span>{icon}</span>
+      <span>{label}</span>
+
+      {!!badge && (
+        <b className="navBadge">
+          {badge}
+        </b>
+      )}
+    </button>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  icon
+}) {
+  return (
+    <div className="statCard">
+      <div className="statIcon">
+        {icon}
+      </div>
+
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
+  );
+}
+
+function ProductModal({
+  product,
+  setProduct,
+  activeColorIndex,
+  setActiveColorIndex,
+  save,
+  close
+}) {
+  const sizeRefs =
+    useRef([]);
+
+  const calculated =
+    calculate(product);
+
+  const color =
+    product.colors?.[activeColorIndex];
+
+  function addColor() {
+    const next =
+      [
+        ...(product.colors||[]),
+        emptyColor(
+          (product.colors?.length||0)+1
+        )
+      ];
+
+    setProduct({
+      ...product,
+      colors:next
+    });
+
+    setActiveColorIndex(
+      next.length-1
+    );
+  }
+
+  function updateColor(index,patch) {
+    const colors =
+      [...product.colors];
+
+    colors[index] = {
+      ...colors[index],
+      ...patch
+    };
+
+    setProduct({
+      ...product,
+      colors
+    });
+  }
+
+  function removeColor(index) {
+    if (product.colors.length<=1) {
+      return;
+    }
+
+    const colors =
+      product.colors.filter(
+        (_,i) => i!==index
+      );
+
+    setProduct({
+      ...product,
+      colors
+    });
+
+    setActiveColorIndex(
+      Math.max(0,index-1)
+    );
+  }
+
+  function chooseImages(event,index) {
+    const files =
+      Array.from(
+        event.target.files || []
+      );
+
+    if (!files.length) {
+      return;
+    }
+
+    Promise.all(
+      files.map(
+        file =>
+          new Promise(resolve => {
+            const reader =
+              new FileReader();
+
+            reader.onload =
+              () =>
+                resolve({
+                  data:reader.result,
+                  name:file.name
+                });
+
+            reader.readAsDataURL(file);
+          })
+      )
+    ).then(newImages => {
+      updateColor(
+        index,
+        {
+          images:[
+            ...(product.colors[index].images||[]),
+            ...newImages
+          ]
+        }
+      );
+    });
+  }
+
+  function removeImage(index,imageIndex) {
+    const images =
+      [...(product.colors[index].images||[])];
+
+    images.splice(
+      imageIndex,
+      1
+    );
+
+    updateColor(
+      index,
+      {images}
+    );
+  }
+
+  function handleStockKey(
+    event,
+    index
+  ) {
+    if (
+      event.key===" " ||
+      event.key==="Enter"
+    ) {
+      event.preventDefault();
+
+      const next =
+        sizeRefs.current[index+1];
+
+      if (next) {
+        next.focus();
+        next.select();
+      }
+    }
+  }
+
+  return (
+    <div className="modalShade">
+
+      <form
+        className="productModal"
+        onSubmit={save}
+      >
+
+        <div className="modalHeader">
+          <div>
+            <small>SHELİVA V3</small>
+            <h2>
+              {product.id
+                ? "Ürün Düzenle"
+                : "Yeni Ürün"}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={close}
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="modalBody compact">
+
+          <div className="editorGrid">
+
+            <section className="editorPane">
+
+              <h3>Ürün Bilgileri</h3>
+
+              <div className="two">
+
+                <label>
+                  Ürün Adı
+
+                  <input
+                    value={product.name}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        name:e.target.value
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Kategori
+
+                  <select
+                    value={product.category}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        category:e.target.value
+                      })
+                    }
+                  >
+                    <option>Yazlık</option>
+                    <option>Kışlık</option>
+                  </select>
+                </label>
+
+              </div>
+
+              <label>
+                Açıklama
+
+                <textarea
+                  value={
+                    product.description || ""
+                  }
+                  onChange={e=>
+                    setProduct({
+                      ...product,
+                      description:e.target.value
+                    })
+                  }
+                />
+              </label>
+
+              <h3>Fiyat & Maliyet</h3>
+
+              <div className="costGrid">
+
+                <label>
+                  Liste Fiyatı
+                  <input
+                    type="number"
+                    value={product.price}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        price:n(e.target.value)
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  İndirim %
+                  <input
+                    type="number"
+                    value={product.discount}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        discount:n(e.target.value)
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Alış Fiyatı
+                  <input
+                    type="number"
+                    value={product.purchasePrice}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        purchasePrice:n(e.target.value)
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  KDV %
+                  <input
+                    type="number"
+                    value={product.vatRate}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        vatRate:n(e.target.value)
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Kargo Maliyeti
+                  <input
+                    type="number"
+                    value={product.shippingCost}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        shippingCost:n(e.target.value)
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Paketleme
+                  <input
+                    type="number"
+                    value={product.packagingCost}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        packagingCost:n(e.target.value)
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Diğer Gider
+                  <input
+                    type="number"
+                    value={product.otherCost}
+                    onChange={e=>
+                      setProduct({
+                        ...product,
+                        otherCost:n(e.target.value)
+                      })
+                    }
+                  />
+                </label>
+
+              </div>
+
+              <div className="costSummary">
+
+                <div>
+                  <span>Müşteri Fiyatı</span>
+                  <strong>
+                    {money(calculated.sale)}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>KDV Tutarı</span>
+                  <strong>
+                    {money(calculated.vat)}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Toplam Maliyet</span>
+                  <strong>
+                    {money(calculated.totalCost)}
+                  </strong>
+                </div>
+
+                <div
+                  className={
+                    calculated.profit>=0
+                      ? "profit"
+                      : "loss"
+                  }
+                >
+                  <span>Brüt Fark</span>
+                  <strong>
+                    {money(calculated.profit)}
+                  </strong>
+                </div>
+
+              </div>
+
+            </section>
+
+            <section className="editorPane">
+
+              <div className="variantsTitle">
+
+                <div>
+                  <h3>
+                    Renk / Fotoğraf / Stok
+                  </h3>
+
+                  <p>
+                    Space veya Enter → sonraki numara
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addColor}
+                >
+                  + RENK
+                </button>
+
+              </div>
+
+              <div className="colorTabs">
+
+                {(product.colors||[])
+                  .map((item,index) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={
+                        index===activeColorIndex
+                          ? "active"
+                          : ""
+                      }
+                      onClick={()=>
+                        setActiveColorIndex(index)
+                      }
+                    >
+                      {item.name || `Renk ${index+1}`}
+                    </button>
+                  ))}
+
+              </div>
+
+              {color && (
+                <>
+
+                  <div className="colorTop">
+
+                    <input
+                      className="colorNameInput"
+                      placeholder="Renk adı"
+                      value={color.name}
+                      onChange={e=>
+                        updateColor(
+                          activeColorIndex,
+                          {name:e.target.value}
+                        )
+                      }
+                    />
+
+                    <label className="imageButton">
+                      + FOTOĞRAF
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        hidden
+                        onChange={e=>
+                          chooseImages(
+                            e,
+                            activeColorIndex
+                          )
+                        }
+                      />
+                    </label>
+
+                    {product.colors.length>1 && (
+                      <button
+                        type="button"
+                        className="removeColor"
+                        onClick={()=>
+                          removeColor(activeColorIndex)
+                        }
+                      >
+                        RENGİ SİL
+                      </button>
+                    )}
+
+                  </div>
+
+                  <div className="imageStrip">
+
+                    {(color.images||[])
+                      .map((image,index) => {
+                        const src =
+                          image?.data ||
+                          image?.url ||
+                          image;
+
+                        return (
+                          <div
+                            className="thumbWrap"
+                            key={index}
+                          >
+                            <img
+                              src={
+                                src?.startsWith?.("/uploads/")
+                                  ? API+src
+                                  : src
+                              }
+                            />
+
+                            <button
+                              type="button"
+                              onClick={()=>
+                                removeImage(
+                                  activeColorIndex,
+                                  index
+                                )
+                              }
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                    {!(color.images||[]).length && (
+                      <div className="imageEmpty">
+                        Bu renge fotoğraf eklenmedi.
+                      </div>
+                    )}
+
+                  </div>
+
+                  <div className="variantStocks">
+
+                    {SIZES.map(
+                      (size,index) => (
+                        <label key={size}>
+                          {size}
+
+                          <input
+                            ref={el=>
+                              sizeRefs.current[index]=el
+                            }
+                            type="number"
+                            min="0"
+                            value={
+                              color.sizes?.[size] ?? 0
+                            }
+                            onKeyDown={e=>
+                              handleStockKey(
+                                e,
+                                index
+                              )
+                            }
+                            onChange={e=>
+                              updateColor(
+                                activeColorIndex,
+                                {
+                                  sizes:{
+                                    ...color.sizes,
+                                    [size]:
+                                      Math.max(
+                                        0,
+                                        n(e.target.value)
+                                      )
+                                  }
+                                }
+                              )
+                            }
+                          />
+                        </label>
+                      )
+                    )}
+
+                  </div>
+
+                </>
+              )}
+
+            </section>
+
+          </div>
+
+        </div>
+
+        <div className="modalFooter">
+
+          <button
+            type="button"
+            onClick={close}
+          >
+            İPTAL
+          </button>
+
+          <button className="saveProduct">
+            KAYDET
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+  );
+}
+
+function OrderModal({
+  order,
+  close,
+  cargoDraft,
+  setCargoDraft,
+  changeStatus
+}) {
+  return (
+    <div className="modalShade">
+
+      <div className="orderModal">
+
+        <div className="modalHeader">
+
+          <div>
+            <small>{order.orderNo}</small>
+            <h2>Sipariş Detayı</h2>
+          </div>
+
+          <button onClick={close}>
+            ×
+          </button>
+
+        </div>
+
+        <div className="orderModalBody">
+
+          <section>
+            <h3>Müşteri</h3>
+
+            <div className="detailGrid">
+
+              <span>
+                Ad Soyad
+                <b>{order.customer.name}</b>
+              </span>
+
+              <span>
+                Telefon
+                <b>{order.customer.phone}</b>
+              </span>
+
+              <span>
+                E-posta
+                <b>{order.customer.email}</b>
+              </span>
+
+              <span>
+                Kaynak
+                <b>
+                  {order.source || "SHELIVA Web"}
+                </b>
+              </span>
+
+              <span>
+                İl / İlçe
+                <b>
+                  {order.customer.city}
+                  {" / "}
+                  {order.customer.district}
+                </b>
+              </span>
+
+              <span>
+                Mahalle
+                <b>
+                  {order.customer.neighborhood || "-"}
+                </b>
+              </span>
+
+              <span className="wide">
+                Adres
+                <b>{order.customer.address}</b>
+              </span>
+
+              <span>
+                Posta Kodu
+                <b>
+                  {order.customer.postalCode || "-"}
+                </b>
+              </span>
+
+            </div>
+          </section>
+
+          <section>
+
+            <h3>Ürünler</h3>
+
+            {(order.items||[])
+              .map(item => (
+                <div
+                  className="orderLine"
+                  key={item.key}
+                >
+                  <div>
+                    <b>{item.name}</b>
+                    <span>
+                      {item.colorName}
+                      {" • "}
+                      {item.size}
+                      {" • "}
+                      {item.qty} adet
+                    </span>
+                  </div>
+
+                  <strong>
+                    {money(item.price*item.qty)}
+                  </strong>
+                </div>
+              ))}
+
+          </section>
+
+          <section>
+
+            <h3>Ödeme</h3>
+
+            <div className="detailGrid">
+
+              <span>
+                Ödeme Yöntemi
+                <b>{order.paymentMethod}</b>
+              </span>
+
+              <span>
+                Durum
+                <b>{order.paymentStatus}</b>
+              </span>
+
+              <span>
+                Ara Toplam
+                <b>{money(order.subtotal)}</b>
+              </span>
+
+              <span>
+                Kargo
+                <b>{money(order.cargoFee)}</b>
+              </span>
+
+              <span>
+                Genel Toplam
+                <b>{money(order.total)}</b>
+              </span>
+
+            </div>
+
+          </section>
+
+          {order.status==="Hazırlanıyor" && (
+            <section>
+
+              <h3>Kargo Çıkışı</h3>
+
+              <div className="cargoForm">
+
+                <select
+                  value={cargoDraft.company}
+                  onChange={e=>
+                    setCargoDraft({
+                      ...cargoDraft,
+                      company:e.target.value
+                    })
+                  }
+                >
+                  <option>Yurtiçi Kargo</option>
+                  <option>Aras Kargo</option>
+                  <option>MNG Kargo</option>
+                  <option>Sürat Kargo</option>
+                  <option>PTT Kargo</option>
+                  <option>Diğer</option>
+                </select>
+
+                <input
+                  placeholder="Takip kodu"
+                  value={cargoDraft.tracking}
+                  onChange={e=>
+                    setCargoDraft({
+                      ...cargoDraft,
+                      tracking:e.target.value
+                    })
+                  }
+                />
+
+                <input
+                  placeholder="Kargo notu"
+                  value={cargoDraft.note}
+                  onChange={e=>
+                    setCargoDraft({
+                      ...cargoDraft,
+                      note:e.target.value
+                    })
+                  }
+                />
+
+              </div>
+
+            </section>
+          )}
+
+          {order.status==="Kargoya Verildi" && (
+            <section>
+
+              <h3>Kargo</h3>
+
+              <div className="detailGrid">
+
+                <span>
+                  Firma
+                  <b>{order.cargoCompany}</b>
+                </span>
+
+                <span>
+                  Takip Kodu
+                  <b>{order.cargoTracking}</b>
+                </span>
+
+              </div>
+
+            </section>
+          )}
+
+        </div>
+
+        <div className="orderModalFooter">
+
+          {order.status==="Yeni" && (
+            <button
+              onClick={()=>
+                changeStatus(
+                  order,
+                  "Hazırlanıyor"
+                )
+              }
+            >
+              HAZIRLAMAYA AL
+            </button>
+          )}
+
+          {order.status==="Hazırlanıyor" && (
+            <button
+              onClick={()=>
+                changeStatus(
+                  order,
+                  "Kargoya Verildi",
+                  {
+                    cargoCompany:
+                      cargoDraft.company,
+
+                    cargoTracking:
+                      cargoDraft.tracking,
+
+                    cargoNote:
+                      cargoDraft.note
+                  }
+                )
+              }
+            >
+              KARGOYA VER
+            </button>
+          )}
+
+          {order.status==="Kargoya Verildi" && (
+            <button
+              onClick={()=>
+                changeStatus(
+                  order,
+                  "Teslim Edildi"
+                )
+              }
+            >
+              TESLİM EDİLDİ
+            </button>
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
