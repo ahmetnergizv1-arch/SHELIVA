@@ -245,3 +245,7 @@ main{padding:30px 34px 50px;min-width:0}
 .productionPrice{font-size:15px;white-space:nowrap}
 .backStatusButton{margin-right:auto;background:#fff!important;color:#56625c!important;border:1px solid #d9dfdb!important}
 @media(max-width:1000px){.reportCards{grid-template-columns:repeat(2,1fr)}.reportRanks{grid-template-columns:1fr}.productionInfo{grid-template-columns:repeat(2,1fr)}}
+/* SHELIVA V6 ADMIN */
+.stockProductVisual{display:flex;align-items:center;gap:14px}
+.stockProductPhoto{width:72px;height:72px;object-fit:cover;border-radius:8px;background:#f1f4f2;border:1px solid #dfe5e1}
+.stockProductVisual small{display:block;color:#89938e;margin-top:4px}

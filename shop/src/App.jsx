@@ -131,6 +131,11 @@ export default function App() {
   const [orderSuccess,setOrderSuccess] =
     useState(null);
 
+  const [settings,setSettings]=useState({});
+  const [productTab,setProductTab]=useState("features");
+  const [productReviews,setProductReviews]=useState([]);
+  const [reviewRating,setReviewRating]=useState(5);
+
   async function refreshProducts() {
     try {
       const res =
@@ -180,6 +185,25 @@ export default function App() {
   useEffect(()=>{
     loadAuthUser();
   },[authToken]);
+
+  useEffect(()=>{
+    fetch(`${API}/api/settings`)
+      .then(r=>r.ok?r.json():{})
+      .then(setSettings)
+      .catch(()=>{});
+  },[]);
+
+  useEffect(()=>{
+    if(!selected?.id){
+      setProductReviews([]);
+      return;
+    }
+
+    fetch(`${API}/api/products/${selected.id}/reviews`)
+      .then(r=>r.ok?r.json():[])
+      .then(setProductReviews)
+      .catch(()=>setProductReviews([]));
+  },[selected?.id]);
 
   const filtered =
     useMemo(()=>{
@@ -488,6 +512,46 @@ export default function App() {
             item => item.qty>0
           )
     );
+  }
+
+  async function submitReview(event){
+    event.preventDefault();
+
+    if(!authToken){
+      setAuthOpen(true);
+      setAuthMode("login");
+      return;
+    }
+
+    const form=new FormData(event.currentTarget);
+    const text=String(form.get("reviewText")||"").trim();
+
+    if(!text){
+      return showToast("Yorum yazmalısın.","","error");
+    }
+
+    const res=await fetch(`${API}/api/reviews`,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        Authorization:`Bearer ${authToken}`
+      },
+      body:JSON.stringify({
+        productId:selected.id,
+        rating:reviewRating,
+        text
+      })
+    });
+
+    const data=await res.json();
+
+    if(!res.ok){
+      return showToast("Yorum gönderilemedi",data.error||"","error");
+    }
+
+    event.currentTarget.reset();
+    setReviewRating(5);
+    showToast("Yorumun alındı","Yönetici onayından sonra yayınlanacak.");
   }
 
   async function placeOrder(event) {
@@ -1191,6 +1255,99 @@ export default function App() {
 
           </section>
 
+          <section className="productTabsPro">
+
+            <div className="productTabsNav">
+              {[
+                ["features","ÜRÜN ÖZELLİKLERİ"],
+                ["reviews",`YORUMLAR (${productReviews.length})`],
+                ["payment","ÖDEME SEÇENEKLERİ"],
+                ["measurements","ÜRÜN ÖLÇÜLERİ"],
+                ["shipping","KARGO, DEĞİŞİM VE İADELER"],
+                ["faq","S.S.S."]
+              ].map(([key,label])=>(
+                <button
+                  key={key}
+                  className={productTab===key ? "active" : ""}
+                  onClick={()=>setProductTab(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="productTabContent">
+              {productTab==="features" && (
+                <div>
+                  <h3>{selected.name}</h3>
+                  <p>{selected.description || "Ürün açıklaması yakında eklenecek."}</p>
+                  <div className="featureInfoGrid">
+                    <div><span>İş Kalitesi</span><b>{selected.quality || "-"}</b></div>
+                    <div><span>Taban</span><b>{selected.sole || "-"}</b></div>
+                    <div><span>Kategori</span><b>{selected.category || "-"}</b></div>
+                    <div><span>Stok</span><b>{totalStock(selected)} adet</b></div>
+                  </div>
+                  {selected.features && <div className="richTextBlock">{selected.features}</div>}
+                </div>
+              )}
+
+              {productTab==="reviews" && (
+                <div className="reviewsArea">
+                  <div className="reviewList">
+                    {!productReviews.length && <p>Bu ürün için henüz onaylanmış yorum yok.</p>}
+                    {productReviews.map(review=>(
+                      <article key={review.id} className="customerReview">
+                        <div><b>{review.userName || "Müşteri"}</b><span>{"★".repeat(review.rating)}{"☆".repeat(5-review.rating)}</span></div>
+                        <p>{review.text}</p>
+                        <small>{new Date(review.createdAt).toLocaleDateString("tr-TR")}</small>
+                      </article>
+                    ))}
+                  </div>
+
+                  <form className="reviewForm" onSubmit={submitReview}>
+                    <h3>Yorum Yaz</h3>
+                    {!authUser && <p>Yorum göndermek için giriş yapman gerekir.</p>}
+                    <div className="ratingPicker">
+                      {[1,2,3,4,5].map(star=>(
+                        <button type="button" key={star} className={star<=reviewRating ? "active" : ""} onClick={()=>setReviewRating(star)}>★</button>
+                      ))}
+                    </div>
+                    <textarea name="reviewText" placeholder="Ürün hakkındaki deneyimini yaz..." required/>
+                    <button type="submit">YORUMU GÖNDER</button>
+                    <small>Yorumun yönetici onayından sonra yayınlanır.</small>
+                  </form>
+                </div>
+              )}
+
+              {productTab==="payment" && (
+                <div>
+                  <h3>Ödeme Seçenekleri</h3>
+                  <p>{selected.paymentInfo || "Kredi/Banka Kartı ve Havale/EFT seçenekleri kullanılabilir."}</p>
+                  {settings.iban && (
+                    <div className="ibanBox">
+                      <span>{settings.bankName || "Banka"}</span>
+                      <b>{settings.iban}</b>
+                      <small>{settings.accountHolder || "SHELİVA"}</small>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {productTab==="measurements" && (
+                <div><h3>Ürün Ölçüleri</h3><p>{selected.measurements || "Kalıp ve ölçü bilgileri yakında eklenecek."}</p></div>
+              )}
+
+              {productTab==="shipping" && (
+                <div><h3>Kargo, Değişim ve İadeler</h3><p>{selected.shippingReturns || "Gönderimler Aras Kargo ile yapılır. Detaylı koşullar yönetim panelinden düzenlenebilir."}</p></div>
+              )}
+
+              {productTab==="faq" && (
+                <div><h3>Sık Sorulan Sorular</h3><p>{selected.faq || "Sık sorulan sorular yakında eklenecek."}</p></div>
+              )}
+            </div>
+
+          </section>
+
         </main>
       )}
 
@@ -1199,7 +1356,7 @@ export default function App() {
           <section className="footerBrand">
             <h2>SHELİVA</h2>
             <p>Modern çizgiler, seçilmiş modeller ve detaylı üretim.</p>
-            <div className="socialLinks"><button>INSTAGRAM</button><button>TIKTOK</button><button>WHATSAPP</button></div>
+            <div className="socialLinks">{settings.instagramUrl && <a href={settings.instagramUrl} target="_blank" rel="noreferrer">INSTAGRAM</a>}{settings.tiktokUrl && <a href={settings.tiktokUrl} target="_blank" rel="noreferrer">TIKTOK</a>}{settings.youtubeUrl && <a href={settings.youtubeUrl} target="_blank" rel="noreferrer">YOUTUBE</a>}{settings.whatsappUrl && <a href={settings.whatsappUrl} target="_blank" rel="noreferrer">WHATSAPP</a>}</div>
           </section>
 
           <section>
@@ -1424,7 +1581,7 @@ export default function App() {
       <aside
         className={
           cartOpen
-            ? "sideDrawer open"
+            ? `sideDrawer open ${checkout ? "checkoutMode" : ""}`
             : "sideDrawer"
         }
       >
@@ -1580,6 +1737,19 @@ export default function App() {
             {!!cart.length && (
               <div className="drawerBottom">
 
+                <div className="checkoutOrderSummary">
+                  <h3>Sipariş Özeti</h3>
+                  {cart.map(item=>(
+                    <div className="checkoutSummaryItem" key={item.key}>
+                      <img src={imageUrl(item.image)}/>
+                      <div><b>{item.name}</b><span>{item.colorName} • {item.size} • {item.qty} adet</span></div>
+                      <strong>{money(item.price*item.qty)}</strong>
+                    </div>
+                  ))}
+                  <div className="cargoSummary"><span>Kargo</span><b>{cartTotal>=n(settings.freeShippingThreshold) ? "Ücretsiz" : money(settings.cargoFee||0)}</b></div>
+                  <div className="cargoCompanyLine"><span>Kargo Firması</span><b>{settings.defaultCargoCompany || "Aras Kargo"}</b></div>
+                </div>
+
                 <div className="drawerTotal">
                   <span>Toplam</span>
                   <strong>
@@ -1592,7 +1762,7 @@ export default function App() {
                     setCheckout(true)
                   }
                 >
-                  SİPARİŞİ TAMAMLA
+                  SİPARİŞİ ONAYLA
                 </button>
 
               </div>
@@ -1713,6 +1883,19 @@ export default function App() {
                   name="cargoFee"
                   value="0"
                 />
+
+                <div className="checkoutOrderSummary">
+                  <h3>Sipariş Özeti</h3>
+                  {cart.map(item=>(
+                    <div className="checkoutSummaryItem" key={item.key}>
+                      <img src={imageUrl(item.image)}/>
+                      <div><b>{item.name}</b><span>{item.colorName} • {item.size} • {item.qty} adet</span></div>
+                      <strong>{money(item.price*item.qty)}</strong>
+                    </div>
+                  ))}
+                  <div className="cargoSummary"><span>Kargo</span><b>{cartTotal>=n(settings.freeShippingThreshold) ? "Ücretsiz" : money(settings.cargoFee||0)}</b></div>
+                  <div className="cargoCompanyLine"><span>Kargo Firması</span><b>{settings.defaultCargoCompany || "Aras Kargo"}</b></div>
+                </div>
 
                 <div className="drawerTotal">
                   <span>Toplam</span>

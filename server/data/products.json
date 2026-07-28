@@ -59,7 +59,7 @@
         "image": "/uploads/p2-c1-1785093947123-010c4d.jpg",
         "sizes": {
           "36": 1,
-          "37": 1,
+          "37": 0,
           "38": 1,
           "39": 2,
           "40": 2,
@@ -77,7 +77,7 @@
         "image": "/uploads/p2-c2-1785093947134-fgy07j.jpg",
         "sizes": {
           "36": 0,
-          "37": 2,
+          "37": 1,
           "38": 2,
           "39": 1,
           "40": 2,
@@ -86,7 +86,47 @@
       }
     ],
     "image": "/uploads/p2-c1-1785093947123-010c4d.jpg",
-    "totalSold": 3,
+    "totalSold": 5,
     "createdAt": "2026-07-26T19:25:47.135Z"
+  },
+  {
+    "id": 3,
+    "code": "SHL-0003",
+    "name": "bot ",
+    "category": "Yazlık",
+    "description": "denemedir ü,\n\n.\n..\n\n\n\n\n.\n\n.\n\n..\n",
+    "quality": "26012",
+    "sole": "262505",
+    "price": 7000,
+    "discount": 10,
+    "purchasePrice": 3000,
+    "vatRate": 10,
+    "shippingCost": 200,
+    "packagingCost": 100,
+    "otherCost": 100,
+    "active": true,
+    "newest": true,
+    "featured": false,
+    "colors": [
+      {
+        "id": "CLR-1785188957821-1",
+        "name": "denemeboıttur",
+        "images": [
+          "/uploads/p3-c1-1785189068706-6esat9.jpg"
+        ],
+        "image": "/uploads/p3-c1-1785189068706-6esat9.jpg",
+        "sizes": {
+          "36": 8,
+          "37": 0,
+          "38": 0,
+          "39": 1,
+          "40": 38,
+          "41": 0
+        }
+      }
+    ],
+    "image": "/uploads/p3-c1-1785189068706-6esat9.jpg",
+    "totalSold": 6,
+    "createdAt": "2026-07-27T21:51:08.707Z"
   }
 ]

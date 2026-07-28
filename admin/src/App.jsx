@@ -44,6 +44,11 @@ function emptyProduct() {
     description:"",
     quality:"",
     sole:"",
+    features:"",
+    measurements:"",
+    paymentInfo:"",
+    shippingReturns:"",
+    faq:"",
 
     price:0,
     discount:15,
@@ -1204,6 +1209,14 @@ export default function App() {
               <label>Ücretsiz Kargo Limiti<input type="number" value={settings.freeShippingThreshold ?? 2500} onChange={e=>setSettings({...settings,freeShippingThreshold:n(e.target.value)})}/></label>
               <label>Sipariş Ön Eki<input value={settings.orderPrefix || "SH"} onChange={e=>setSettings({...settings,orderPrefix:e.target.value})}/></label>
               <label>Üretim Fişi Ön Eki<input value={settings.ticketPrefix || "FIS"} onChange={e=>setSettings({...settings,ticketPrefix:e.target.value})}/></label>
+              <label>Varsayılan Kargo<input value={settings.defaultCargoCompany || "Aras Kargo"} onChange={e=>setSettings({...settings,defaultCargoCompany:e.target.value})}/></label>
+              <label>Banka Adı<input value={settings.bankName || ""} onChange={e=>setSettings({...settings,bankName:e.target.value})}/></label>
+              <label>IBAN<input value={settings.iban || ""} onChange={e=>setSettings({...settings,iban:e.target.value})}/></label>
+              <label>Hesap Sahibi<input value={settings.accountHolder || ""} onChange={e=>setSettings({...settings,accountHolder:e.target.value})}/></label>
+              <label>Instagram Linki<input value={settings.instagramUrl || ""} onChange={e=>setSettings({...settings,instagramUrl:e.target.value})}/></label>
+              <label>YouTube Linki<input value={settings.youtubeUrl || ""} onChange={e=>setSettings({...settings,youtubeUrl:e.target.value})}/></label>
+              <label>TikTok Linki<input value={settings.tiktokUrl || ""} onChange={e=>setSettings({...settings,tiktokUrl:e.target.value})}/></label>
+              <label>WhatsApp Linki<input value={settings.whatsappUrl || ""} onChange={e=>setSettings({...settings,whatsappUrl:e.target.value})}/></label>
             </div>
           </section>
         )}
@@ -1523,17 +1536,56 @@ function ProductModal({
 
               <label>
                 Açıklama
-
                 <textarea
-                  value={
-                    product.description || ""
-                  }
-                  onChange={e=>
-                    setProduct({
-                      ...product,
-                      description:e.target.value
-                    })
-                  }
+                  value={product.description || ""}
+                  onChange={e=>setProduct({...product,description:e.target.value})}
+                />
+              </label>
+
+              <h3>Ürün Sayfası İçerikleri</h3>
+
+              <label>
+                Ürün Özellikleri
+                <textarea
+                  placeholder="Örn: Hakiki deri, yumuşak iç astar, günlük kullanım..."
+                  value={product.features || ""}
+                  onChange={e=>setProduct({...product,features:e.target.value})}
+                />
+              </label>
+
+              <label>
+                Ürün Ölçüleri / Kalıp Bilgisi
+                <textarea
+                  placeholder="Örn: Tam kalıp. 37 numara iç uzunluk..."
+                  value={product.measurements || ""}
+                  onChange={e=>setProduct({...product,measurements:e.target.value})}
+                />
+              </label>
+
+              <label>
+                Ödeme Seçenekleri Metni
+                <textarea
+                  placeholder="Kart, Havale/EFT vb. açıklama"
+                  value={product.paymentInfo || ""}
+                  onChange={e=>setProduct({...product,paymentInfo:e.target.value})}
+                />
+              </label>
+
+              <label>
+                Kargo, Değişim ve İade Metni
+                <textarea
+                  placeholder="Aras Kargo, iade/değişim koşulları..."
+                  value={product.shippingReturns || ""}
+                  onChange={e=>setProduct({...product,shippingReturns:e.target.value})}
+                />
+              </label>
+
+              <label>
+                S.S.S.
+                <textarea
+                  placeholder="Sık sorulan sorular / cevaplar"
+                  value={product.faq || ""}
+                  onChange={e=>setProduct({...product,faq:e.target.value})}
                 />
               </label>
 
