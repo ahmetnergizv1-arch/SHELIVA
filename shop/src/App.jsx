@@ -67,6 +67,21 @@ export default function App() {
   const [authOpen,setAuthOpen]=useState(false);
   const [authMode,setAuthMode]=useState("login");
   const [otpSent,setOtpSent]=useState(false);
+
+  const [toast,setToast]=useState(null);
+  const [accountOpen,setAccountOpen]=useState(false);
+
+  const [savedAddress,setSavedAddress]=useState(
+    () => {
+      try {
+        return JSON.parse(
+          localStorage.getItem("sheliva-saved-address") || "null"
+        );
+      } catch {
+        return null;
+      }
+    }
+  );
   const [products,setProducts] =
     useState([]);
 
@@ -270,6 +285,41 @@ export default function App() {
     discounted[0] ||
     products[0];
 
+  function showToast(message,detail="",type="success") {
+    setToast({message,detail,type});
+
+    setTimeout(()=>{
+      setToast(null);
+    },3200);
+  }
+
+  function saveAddressFromForm(form) {
+    const address = {
+      name:form.get("name") || "",
+      phone:form.get("phone") || "",
+      email:form.get("email") || "",
+      city:form.get("city") || "",
+      district:form.get("district") || "",
+      neighborhood:form.get("neighborhood") || "",
+      postalCode:form.get("postalCode") || "",
+      address:form.get("address") || ""
+    };
+
+    setSavedAddress(address);
+
+    localStorage.setItem(
+      "sheliva-saved-address",
+      JSON.stringify(address)
+    );
+  }
+
+  function clearSavedAddress() {
+    if(!window.confirm("Kayıtlı teslimat adresi silinsin mi?")) return;
+
+    setSavedAddress(null);
+    localStorage.removeItem("sheliva-saved-address");
+  }
+
   function openProduct(product) {
     const color =
       product.colors?.[0] ||
@@ -385,7 +435,10 @@ export default function App() {
       ];
     });
 
-    setCartOpen(true);
+    showToast(
+      "Ürün başarıyla sepetine eklendi",
+      `${selected.name} • ${selectedColor.name} • ${selectedSize} numara`
+    );
   }
 
   function changeQty(key,delta) {
@@ -502,6 +555,10 @@ export default function App() {
     setOrderSuccess(data);
     setCart([]);
 
+    if(authUser){
+      saveAddressFromForm(form);
+    }
+
     await refreshProducts();
   }
 
@@ -593,9 +650,13 @@ export default function App() {
 
           <button
             className="headerAccount"
-            onClick={()=>authUser ? logoutUser() : setAuthOpen(true)}
+            onClick={()=>
+              authUser
+                ? setAccountOpen(true)
+                : setAuthOpen(true)
+            }
           >
-            {authUser ? authUser.name : "GİRİŞ / ÜYE OL"}
+            {authUser ? "HESABIM" : "GİRİŞ / ÜYE OL"}
           </button>
 
           <button
@@ -1177,7 +1238,7 @@ export default function App() {
               </form>
             ) : (
               <form className="authForm" onSubmit={registerUser}>
-                <label>Ad Soyad<input name="name" required placeholder="Ad Soyad"/></label>
+                <label>Ad Soyad<input name="name" required placeholder="Ad Soyad" defaultValue={savedAddress?.name || authUser?.name || ""}/></label>
                 <label>Telefon<input name="phone" required placeholder="05xx xxx xx xx"/></label>
                 <label>E-posta<input name="email" type="email" required placeholder="mail@ornek.com"/></label>
                 <label>Şifre<input name="password" type="password" required minLength="6" placeholder="En az 6 karakter"/></label>
@@ -1189,6 +1250,166 @@ export default function App() {
         </div>
       )}
 
+      {accountOpen && authUser && (
+        <div className="accountOverlay">
+
+          <div className="accountPanel">
+
+            <div className="accountHead">
+
+              <div>
+                <small>SHELİVA HESABIM</small>
+                <h2>{authUser.name}</h2>
+                <span>{authUser.email}</span>
+              </div>
+
+              <button
+                onClick={()=>
+                  setAccountOpen(false)
+                }
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div className="accountMenuGrid">
+
+              <section className="accountMenuCard">
+                <b>PROFİL BİLGİLERİ</b>
+
+                <span>{authUser.name}</span>
+                <span>{authUser.phone}</span>
+                <span>{authUser.email}</span>
+              </section>
+
+              <section className="accountMenuCard addressCard">
+
+                <div className="accountCardTitle">
+                  <b>TESLİMAT ADRESİM</b>
+
+                  {savedAddress && (
+                    <button
+                      onClick={clearSavedAddress}
+                    >
+                      SİL
+                    </button>
+                  )}
+                </div>
+
+                {savedAddress ? (
+                  <>
+                    <strong>
+                      {savedAddress.name}
+                    </strong>
+
+                    <p>
+                      {savedAddress.neighborhood
+                        ? `${savedAddress.neighborhood}, `
+                        : ""}
+                      {savedAddress.address}
+                    </p>
+
+                    <span>
+                      {savedAddress.district}
+                      {" / "}
+                      {savedAddress.city}
+                    </span>
+
+                    <span>
+                      {savedAddress.phone}
+                    </span>
+
+                    <small>
+                      Bir sonraki siparişte bu bilgiler
+                      otomatik doldurulur.
+                    </small>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      Henüz kayıtlı teslimat adresin yok.
+                    </p>
+
+                    <small>
+                      İlk siparişinde adresini gir.
+                      Siparişten sonra otomatik kaydedilecek.
+                    </small>
+                  </>
+                )}
+
+              </section>
+
+              <section className="accountMenuCard">
+                <b>SİPARİŞLERİM</b>
+                <p>
+                  Sipariş geçmişi ve takip sistemi
+                  bir sonraki aşamada burada olacak.
+                </p>
+              </section>
+
+              <section className="accountMenuCard">
+                <b>GÜVENLİK</b>
+                <p>
+                  Şifre ve telefon doğrulama ayarları.
+                </p>
+              </section>
+
+            </div>
+
+            <div className="accountFooter">
+
+              <button
+                className="logoutButton"
+                onClick={()=>{
+                  setAccountOpen(false);
+                  logoutUser();
+                }}
+              >
+                ÇIKIŞ YAP
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {toast && (
+        <div
+          className={
+            `shopToast ${toast.type || "success"}`
+          }
+        >
+          <div className="toastCheck">
+            ✓
+          </div>
+
+          <div className="toastText">
+            <b>{toast.message}</b>
+            <span>{toast.detail}</span>
+          </div>
+
+          <button
+            onClick={()=>{
+              setToast(null);
+              setCartOpen(true);
+            }}
+          >
+            SEPETE GİT
+          </button>
+
+          <button
+            className="toastClose"
+            onClick={()=>
+              setToast(null)
+            }
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div
         className={
           cartOpen
@@ -1230,8 +1451,43 @@ export default function App() {
             <div className="drawerContent">
 
               {!cart.length && (
-                <div className="empty">
-                  Sepetin boş.
+                <div className="emptyCartPro">
+
+                  <div className="emptyCartIcon">
+                    🛍
+                  </div>
+
+                  <h3>Sepetin boş.</h3>
+
+                  <p>
+                    Beğendiğin ürünleri sepete ekleyerek
+                    alışverişine başlayabilirsin.
+                  </p>
+
+                  <button
+                    onClick={()=>{
+                      setCartOpen(false);
+                      setCheckout(false);
+                      goHome("Tümü");
+
+                      setTimeout(()=>{
+                        document
+                          .querySelector("#products")
+                          ?.scrollIntoView({
+                            behavior:"smooth"
+                          });
+                      },100);
+                    }}
+                  >
+                    Sepetine Yeni Ürünler Eklemek İçin Tıkla
+                  </button>
+
+                  <div className="emptyCartBenefits">
+                    <span>✓ Gerçek stok</span>
+                    <span>✓ Güvenli alışveriş</span>
+                    <span>✓ Kolay sipariş</span>
+                  </div>
+
                 </div>
               )}
 
@@ -1378,20 +1634,20 @@ export default function App() {
                 <input
                   name="name"
                   required
-                  placeholder="Ad Soyad"
+                  placeholder="Ad Soyad" defaultValue={savedAddress?.name || authUser?.name || ""}
                 />
 
                 <input
                   name="phone"
                   required
-                  placeholder="Telefon"
+                  placeholder="Telefon" defaultValue={savedAddress?.phone || authUser?.phone || ""}
                 />
 
                 <input
                   name="email"
                   type="email"
                   required
-                  placeholder="E-posta"
+                  placeholder="E-posta" defaultValue={savedAddress?.email || authUser?.email || ""}
                 />
 
                 <div className="checkoutTwo">
@@ -1399,13 +1655,13 @@ export default function App() {
                   <input
                     name="city"
                     required
-                    placeholder="İl"
+                    placeholder="İl" defaultValue={savedAddress?.city || ""}
                   />
 
                   <input
                     name="district"
                     required
-                    placeholder="İlçe"
+                    placeholder="İlçe" defaultValue={savedAddress?.district || ""}
                   />
 
                 </div>
@@ -1414,12 +1670,12 @@ export default function App() {
 
                   <input
                     name="neighborhood"
-                    placeholder="Mahalle"
+                    placeholder="Mahalle" defaultValue={savedAddress?.neighborhood || ""}
                   />
 
                   <input
                     name="postalCode"
-                    placeholder="Posta Kodu"
+                    placeholder="Posta Kodu" defaultValue={savedAddress?.postalCode || ""}
                   />
 
                 </div>
@@ -1427,7 +1683,7 @@ export default function App() {
                 <textarea
                   name="address"
                   required
-                  placeholder="Açık adres"
+                  placeholder="Açık adres" defaultValue={savedAddress?.address || ""}
                 />
 
                 <textarea
