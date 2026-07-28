@@ -103,6 +103,7 @@ export default function App() {
   const [returns,setReturns] = useState([]);
   const [settings,setSettings] = useState({});
   const [metrics,setMetrics] = useState({});
+  const settingsDirtyRef = useRef(false);
   const [page,setPage] =
     useState("dashboard");
 
@@ -135,7 +136,7 @@ export default function App() {
 
   const [cargoDraft,setCargoDraft] =
     useState({
-      company:"Yurtiçi Kargo",
+      company:"Aras Kargo",
       tracking:"",
       note:""
     });
@@ -159,7 +160,7 @@ export default function App() {
 
       try {
         const [tt,rr,ss,mm]=await Promise.all([fetch(`${API}/api/tickets`),fetch(`${API}/api/returns`),fetch(`${API}/api/settings`),fetch(`${API}/api/metrics`)]);
-        if(tt.ok)setTickets(await tt.json()); if(rr.ok)setReturns(await rr.json()); if(ss.ok)setSettings(await ss.json()); if(mm.ok)setMetrics(await mm.json());
+        if(tt.ok)setTickets(await tt.json()); if(rr.ok)setReturns(await rr.json()); if(ss.ok){const incoming=await ss.json(); if(!settingsDirtyRef.current)setSettings(incoming);} if(mm.ok)setMetrics(await mm.json());
       } catch {}
       setConnected(true);
     } catch {
@@ -432,6 +433,7 @@ export default function App() {
       body:JSON.stringify(settings)
     });
     if(!res.ok) return alert("Ayarlar kaydedilemedi.");
+    settingsDirtyRef.current=false;
     alert("Ayarlar kaydedildi.");
     await refresh();
   }
@@ -962,24 +964,60 @@ export default function App() {
                   key={product.id}
                 >
 
-                  <div className="stockProductTitle">
-                    <div>
-                      <h3>{product.name}</h3>
-                      <span>{product.code}</span>
+                  <div className="stockProductTitle stockProductTitlePro">
+                    <div className="stockMainIdentity">
+                      <div className="stockMainPhoto">
+                        {(product.colors?.[0]?.images?.[0] || product.colors?.[0]?.image || product.image) ? (
+                          <img
+                            src={
+                              (product.colors?.[0]?.images?.[0] || product.colors?.[0]?.image || product.image).startsWith("/uploads/")
+                                ? API+(product.colors?.[0]?.images?.[0] || product.colors?.[0]?.image || product.image)
+                                : (product.colors?.[0]?.images?.[0] || product.colors?.[0]?.image || product.image)
+                            }
+                          />
+                        ) : (
+                          <span>FOTOĞRAF YOK</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <h3>{product.name}</h3>
+                        <span>{product.code}</span>
+                        <small>{product.quality || "Kalite girilmedi"} • {product.sole || "Taban girilmedi"}</small>
+                      </div>
                     </div>
 
-                    <strong>
-                      {totalStock(product)} adet
-                    </strong>
+                    <div className="stockTotalBadge">
+                      <span>TOPLAM STOK</span>
+                      <strong>{totalStock(product)} adet</strong>
+                    </div>
                   </div>
 
                   {(product.colors||[])
                     .map(color => (
                       <div
-                        className="stockColor"
+                        className="stockColor stockColorPro"
                         key={color.id}
                       >
-                        <b>{color.name}</b>
+                        <div className="stockColorIdentity">
+                          <div className="stockColorPhoto">
+                            {(color.images?.[0] || color.image) ? (
+                              <img
+                                src={
+                                  (color.images?.[0] || color.image).startsWith("/uploads/")
+                                    ? API+(color.images?.[0] || color.image)
+                                    : (color.images?.[0] || color.image)
+                                }
+                              />
+                            ) : (
+                              <span>RENK</span>
+                            )}
+                          </div>
+                          <div>
+                            <small>RENK</small>
+                            <b>{color.name}</b>
+                          </div>
+                        </div>
 
                         <div className="stockSizes">
                           {SIZES.map(size => (
@@ -1201,22 +1239,22 @@ export default function App() {
             </div>
 
             <div className="settingsGrid">
-              <label>Mağaza Adı<input value={settings.storeName || ""} onChange={e=>setSettings({...settings,storeName:e.target.value})}/></label>
-              <label>Destek Telefonu<input value={settings.supportPhone || ""} onChange={e=>setSettings({...settings,supportPhone:e.target.value})}/></label>
-              <label>Destek E-posta<input value={settings.supportEmail || ""} onChange={e=>setSettings({...settings,supportEmail:e.target.value})}/></label>
-              <label>Varsayılan KDV %<input type="number" value={settings.defaultVatRate ?? 20} onChange={e=>setSettings({...settings,defaultVatRate:n(e.target.value)})}/></label>
-              <label>Kargo Ücreti<input type="number" value={settings.cargoFee ?? 0} onChange={e=>setSettings({...settings,cargoFee:n(e.target.value)})}/></label>
-              <label>Ücretsiz Kargo Limiti<input type="number" value={settings.freeShippingThreshold ?? 2500} onChange={e=>setSettings({...settings,freeShippingThreshold:n(e.target.value)})}/></label>
-              <label>Sipariş Ön Eki<input value={settings.orderPrefix || "SH"} onChange={e=>setSettings({...settings,orderPrefix:e.target.value})}/></label>
-              <label>Üretim Fişi Ön Eki<input value={settings.ticketPrefix || "FIS"} onChange={e=>setSettings({...settings,ticketPrefix:e.target.value})}/></label>
-              <label>Varsayılan Kargo<input value={settings.defaultCargoCompany || "Aras Kargo"} onChange={e=>setSettings({...settings,defaultCargoCompany:e.target.value})}/></label>
-              <label>Banka Adı<input value={settings.bankName || ""} onChange={e=>setSettings({...settings,bankName:e.target.value})}/></label>
-              <label>IBAN<input value={settings.iban || ""} onChange={e=>setSettings({...settings,iban:e.target.value})}/></label>
-              <label>Hesap Sahibi<input value={settings.accountHolder || ""} onChange={e=>setSettings({...settings,accountHolder:e.target.value})}/></label>
-              <label>Instagram Linki<input value={settings.instagramUrl || ""} onChange={e=>setSettings({...settings,instagramUrl:e.target.value})}/></label>
-              <label>YouTube Linki<input value={settings.youtubeUrl || ""} onChange={e=>setSettings({...settings,youtubeUrl:e.target.value})}/></label>
-              <label>TikTok Linki<input value={settings.tiktokUrl || ""} onChange={e=>setSettings({...settings,tiktokUrl:e.target.value})}/></label>
-              <label>WhatsApp Linki<input value={settings.whatsappUrl || ""} onChange={e=>setSettings({...settings,whatsappUrl:e.target.value})}/></label>
+              <label>Mağaza Adı<input value={settings.storeName || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,storeName:e.target.value})}}/></label>
+              <label>Destek Telefonu<input value={settings.supportPhone || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,supportPhone:e.target.value})}}/></label>
+              <label>Destek E-posta<input value={settings.supportEmail || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,supportEmail:e.target.value})}}/></label>
+              <label>Varsayılan KDV %<input type="number" value={settings.defaultVatRate ?? 20} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,defaultVatRate:n(e.target.value)})}}/></label>
+              <label>Kargo Ücreti<input type="number" value={settings.cargoFee ?? 0} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,cargoFee:n(e.target.value)})}}/></label>
+              <label>Ücretsiz Kargo Limiti<input type="number" value={settings.freeShippingThreshold ?? 2500} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,freeShippingThreshold:n(e.target.value)})}}/></label>
+              <label>Sipariş Ön Eki<input value={settings.orderPrefix || "SH"} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,orderPrefix:e.target.value})}}/></label>
+              <label>Üretim Fişi Ön Eki<input value={settings.ticketPrefix || "FIS"} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,ticketPrefix:e.target.value})}}/></label>
+              <label>Varsayılan Kargo<input value={settings.defaultCargoCompany || "Aras Kargo"} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,defaultCargoCompany:e.target.value})}}/></label>
+              <label>Banka Adı<input value={settings.bankName || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,bankName:e.target.value})}}/></label>
+              <label>IBAN<input value={settings.iban || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,iban:e.target.value})}}/></label>
+              <label>Hesap Sahibi<input value={settings.accountHolder || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,accountHolder:e.target.value})}}/></label>
+              <label>Instagram Linki<input value={settings.instagramUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,instagramUrl:e.target.value})}}/></label>
+              <label>YouTube Linki<input value={settings.youtubeUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,youtubeUrl:e.target.value})}}/></label>
+              <label>TikTok Linki<input value={settings.tiktokUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,tiktokUrl:e.target.value})}}/></label>
+              <label>WhatsApp Linki<input value={settings.whatsappUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,whatsappUrl:e.target.value})}}/></label>
             </div>
           </section>
         )}
@@ -1446,9 +1484,15 @@ function ProductModal({
   }
 
   return (
-    <div className="modalShade">
+    <div
+      className="modalShade"
+      onMouseDown={e=>{
+        if(e.target===e.currentTarget) close();
+      }}
+    >
 
       <form
+        onMouseDown={e=>e.stopPropagation()}
         className="productModal"
         onSubmit={save}
       >
@@ -1954,9 +1998,17 @@ function OrderModal({
   revertOrder
 }) {
   return (
-    <div className="modalShade">
+    <div
+      className="modalShade"
+      onMouseDown={e=>{
+        if(e.target===e.currentTarget) close();
+      }}
+    >
 
-      <div className="orderModal">
+      <div
+        className="orderModal orderModalPro"
+        onMouseDown={e=>e.stopPropagation()}
+      >
 
         <div className="modalHeader">
 
@@ -2138,8 +2190,8 @@ function OrderModal({
                     })
                   }
                 >
-                  <option>Yurtiçi Kargo</option>
                   <option>Aras Kargo</option>
+                  <option>Yurtiçi Kargo</option>
                   <option>MNG Kargo</option>
                   <option>Sürat Kargo</option>
                   <option>PTT Kargo</option>

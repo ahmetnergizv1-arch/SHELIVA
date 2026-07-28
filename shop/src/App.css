@@ -2052,3 +2052,114 @@ a {
 .checkoutMode .drawerTotal{background:#fff;border:1px solid #e0e3e6;color:#18202a;border-radius:8px;padding:16px}.checkoutMode .orderButton{background:#16c35b!important;font-size:13px;padding:15px!important;border-radius:8px}
 .checkoutMode .success{grid-column:1/3;background:#fff;border:1px solid #e0e3e6;border-radius:12px;max-width:700px;margin:50px auto;padding:50px;text-align:center}.successLead{color:#69737c}
 @media(max-width:850px){.featureInfoGrid{grid-template-columns:1fr 1fr}.reviewsArea{grid-template-columns:1fr}.checkoutMode .checkoutForm{display:block}.checkoutOrderSummary{position:static;margin:18px 0}}
+/* SHELIVA V7 FIXES */
+
+.drawerBottom .checkoutOrderSummary{
+  display:none!important;
+}
+
+.sideDrawer:not(.checkoutMode) .drawerBottom{
+  background:#0f1110!important;
+  color:#fff!important;
+  border-top:1px solid #2b2f2d!important;
+}
+
+.sideDrawer:not(.checkoutMode) .drawerTotal{
+  background:transparent!important;
+  color:#fff!important;
+  border:0!important;
+  padding:12px 0!important;
+}
+
+.sideDrawer:not(.checkoutMode) .drawerBottom>button{
+  width:100%;
+  background:#2f9f7a!important;
+  color:#fff!important;
+  border:0!important;
+  padding:14px!important;
+  font-weight:700!important;
+}
+
+.checkoutMode{
+  background:#f5f6f7!important;
+}
+
+.checkoutMode .drawerHead{
+  background:#fff!important;
+  color:#1a2026!important;
+}
+
+.checkoutMode .checkoutForm{
+  background:#f5f6f7!important;
+}
+
+.checkoutHeading{
+  margin:4px 0 8px;
+}
+
+.checkoutHeading small{
+  color:#279874;
+  letter-spacing:3px;
+  font-size:9px;
+}
+
+.checkoutHeading h2{
+  margin:5px 0 4px;
+  font-size:29px;
+  color:#161d23;
+}
+
+.checkoutHeading p{
+  margin:0 0 10px;
+  color:#7a848d;
+}
+
+.paymentChoices{
+  display:grid;
+  gap:10px;
+}
+
+.paymentChoices label{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:15px;
+  border:1px solid #dfe3e6;
+  border-radius:9px;
+  background:#fff;
+  color:#1b232a;
+  cursor:pointer;
+}
+
+.paymentChoices input{
+  width:auto!important;
+  margin-top:3px;
+  accent-color:#279874;
+}
+
+.paymentChoices span{
+  display:block;
+}
+
+.paymentChoices b,
+.paymentChoices small{
+  display:block;
+}
+
+.paymentChoices small{
+  margin-top:4px;
+  color:#7f8890;
+  line-height:1.45;
+}
+
+.productTabContent{
+  min-height:180px!important;
+}
+
+.productTabContent h3{
+  margin-bottom:10px;
+}
+
+.featureInfoGrid{
+  display:none!important;
+}

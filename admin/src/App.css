@@ -249,3 +249,263 @@ main{padding:30px 34px 50px;min-width:0}
 .stockProductVisual{display:flex;align-items:center;gap:14px}
 .stockProductPhoto{width:72px;height:72px;object-fit:cover;border-radius:8px;background:#f1f4f2;border:1px solid #dfe5e1}
 .stockProductVisual small{display:block;color:#89938e;margin-top:4px}
+/* SHELIVA V7 ADMIN FIXES */
+
+.stockProductCard{
+  overflow:hidden;
+}
+
+.stockProductTitlePro{
+  padding:14px!important;
+  align-items:center!important;
+}
+
+.stockMainIdentity{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.stockMainPhoto{
+  width:76px;
+  height:76px;
+  border:1px solid #dfe4e1;
+  border-radius:9px;
+  background:#f1f4f2;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  color:#9aa39e;
+  font-size:8px;
+}
+
+.stockMainPhoto img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.stockMainIdentity h3{
+  margin:0 0 4px;
+  font-size:18px;
+}
+
+.stockMainIdentity span{
+  display:block;
+  color:#7e8983;
+  font-size:10px;
+}
+
+.stockMainIdentity small{
+  display:block;
+  margin-top:7px;
+  color:#2d9a73;
+  font-size:10px;
+}
+
+.stockTotalBadge{
+  text-align:right;
+  border:1px solid #dfe4e1;
+  background:#f8faf9;
+  border-radius:8px;
+  padding:10px 14px;
+}
+
+.stockTotalBadge span,
+.stockTotalBadge strong{
+  display:block;
+}
+
+.stockTotalBadge span{
+  color:#8b9490;
+  font-size:8px;
+  letter-spacing:1px;
+}
+
+.stockTotalBadge strong{
+  margin-top:3px;
+  font-size:16px;
+}
+
+.stockColorPro{
+  display:grid!important;
+  grid-template-columns:170px 1fr!important;
+  gap:14px!important;
+  align-items:center!important;
+  padding:12px 14px!important;
+  border-top:1px solid #edf0ee!important;
+}
+
+.stockColorIdentity{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.stockColorPhoto{
+  width:58px;
+  height:58px;
+  overflow:hidden;
+  border-radius:7px;
+  background:#f1f4f2;
+  border:1px solid #dfe4e1;
+  display:grid;
+  place-items:center;
+  font-size:8px;
+  color:#9aa39e;
+}
+
+.stockColorPhoto img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.stockColorIdentity small,
+.stockColorIdentity b{
+  display:block;
+}
+
+.stockColorIdentity small{
+  font-size:8px;
+  color:#949d98;
+  letter-spacing:1px;
+  margin-bottom:4px;
+}
+
+.stockColorIdentity b{
+  font-size:13px;
+}
+
+.orderModalPro{
+  width:min(980px,94vw)!important;
+  max-height:88vh!important;
+  border-radius:12px!important;
+}
+
+.orderModalPro .modalHeader{
+  padding:18px 22px!important;
+}
+
+.orderModalPro .modalHeader small{
+  font-size:10px!important;
+  letter-spacing:2px;
+  color:#249873!important;
+}
+
+.orderModalPro .modalHeader h2{
+  font-size:24px!important;
+}
+
+.orderModalPro .orderModalBody{
+  padding:16px 20px 22px!important;
+}
+
+.orderModalPro .orderModalBody>section{
+  border:1px solid #dfe4e1!important;
+  border-radius:10px!important;
+  padding:16px!important;
+  margin-bottom:12px!important;
+  background:#fff!important;
+}
+
+.orderModalPro .orderModalBody>section h3{
+  font-size:16px!important;
+  margin:0 0 14px!important;
+}
+
+.orderModalPro .detailGrid{
+  grid-template-columns:repeat(4,1fr)!important;
+  gap:10px!important;
+}
+
+.orderModalPro .detailGrid span{
+  font-size:9px!important;
+  color:#89928d!important;
+  padding:8px 10px!important;
+  background:#f8faf9!important;
+  border-radius:7px!important;
+}
+
+.orderModalPro .detailGrid b{
+  display:block!important;
+  margin-top:4px!important;
+  font-size:11px!important;
+  color:#17201b!important;
+  line-height:1.35!important;
+}
+
+.orderModalPro .productionOrderLine{
+  display:grid!important;
+  grid-template-columns:130px 1fr 120px!important;
+  gap:16px!important;
+  align-items:center!important;
+  padding:14px!important;
+  border:1px solid #e1e6e3!important;
+  border-radius:10px!important;
+  margin-bottom:10px!important;
+  background:#fafcfb!important;
+}
+
+.orderModalPro .orderProductPhoto{
+  width:130px!important;
+  height:105px!important;
+  border-radius:8px!important;
+  overflow:hidden!important;
+  background:#eef2ef!important;
+}
+
+.orderModalPro .orderProductPhoto img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+}
+
+.orderModalPro .productionInfo{
+  display:grid!important;
+  grid-template-columns:repeat(3,1fr)!important;
+  gap:10px!important;
+}
+
+.orderModalPro .productionInfo>div{
+  padding:8px 10px!important;
+  background:#fff!important;
+  border:1px solid #e6eae8!important;
+  border-radius:7px!important;
+}
+
+.orderModalPro .productionInfo small{
+  display:block!important;
+  color:#909994!important;
+  font-size:8px!important;
+  letter-spacing:.5px!important;
+  margin-bottom:4px!important;
+}
+
+.orderModalPro .productionInfo b{
+  font-size:11px!important;
+}
+
+.orderModalPro .productionPrice{
+  text-align:right!important;
+  font-size:18px!important;
+}
+
+.orderModalPro .cargoForm{
+  grid-template-columns:1fr 1fr 1.3fr!important;
+  gap:9px!important;
+}
+
+.orderModalPro .cargoForm input,
+.orderModalPro .cargoForm select{
+  padding:11px!important;
+  border-radius:7px!important;
+}
+
+@media(max-width:900px){
+  .stockColorPro{grid-template-columns:1fr!important}
+  .orderModalPro .detailGrid{grid-template-columns:1fr 1fr!important}
+  .orderModalPro .productionOrderLine{grid-template-columns:100px 1fr!important}
+  .orderModalPro .productionPrice{grid-column:2}
+  .orderModalPro .productionInfo{grid-template-columns:1fr 1fr!important}
+}

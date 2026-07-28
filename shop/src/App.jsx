@@ -1281,12 +1281,7 @@ export default function App() {
                 <div>
                   <h3>{selected.name}</h3>
                   <p>{selected.description || "Ürün açıklaması yakında eklenecek."}</p>
-                  <div className="featureInfoGrid">
-                    <div><span>İş Kalitesi</span><b>{selected.quality || "-"}</b></div>
-                    <div><span>Taban</span><b>{selected.sole || "-"}</b></div>
-                    <div><span>Kategori</span><b>{selected.category || "-"}</b></div>
-                    <div><span>Stok</span><b>{totalStock(selected)} adet</b></div>
-                  </div>
+
                   {selected.features && <div className="richTextBlock">{selected.features}</div>}
                 </div>
               )}
@@ -1737,18 +1732,6 @@ export default function App() {
             {!!cart.length && (
               <div className="drawerBottom">
 
-                <div className="checkoutOrderSummary">
-                  <h3>Sipariş Özeti</h3>
-                  {cart.map(item=>(
-                    <div className="checkoutSummaryItem" key={item.key}>
-                      <img src={imageUrl(item.image)}/>
-                      <div><b>{item.name}</b><span>{item.colorName} • {item.size} • {item.qty} adet</span></div>
-                      <strong>{money(item.price*item.qty)}</strong>
-                    </div>
-                  ))}
-                  <div className="cargoSummary"><span>Kargo</span><b>{cartTotal>=n(settings.freeShippingThreshold) ? "Ücretsiz" : money(settings.cargoFee||0)}</b></div>
-                  <div className="cargoCompanyLine"><span>Kargo Firması</span><b>{settings.defaultCargoCompany || "Aras Kargo"}</b></div>
-                </div>
 
                 <div className="drawerTotal">
                   <span>Toplam</span>
@@ -1787,9 +1770,13 @@ export default function App() {
                   ← Sepete dön
                 </button>
 
-                <h3>
-                  Teslimat Bilgileri
-                </h3>
+                <div className="checkoutHeading">
+                  <small>SHELİVA CHECKOUT</small>
+                  <h2>Ödeme ve Teslimat</h2>
+                  <p>Siparişini tamamlamak için bilgilerini kontrol et.</p>
+                </div>
+
+                <h3>Teslimat Bilgileri</h3>
 
                 {!authUser && (
                   <div className="guestCheckoutInfo">
@@ -1861,41 +1848,49 @@ export default function App() {
                   placeholder="Sipariş notu"
                 />
 
-                <select
-                  name="paymentMethod"
-                  defaultValue="Kapıda / Taslak"
-                >
-                  <option>
-                    Kapıda / Taslak
-                  </option>
+                <div className="paymentChoices">
+                  <label>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="Kredi / Banka Kartı"
+                      defaultChecked
+                    />
+                    <span>
+                      <b>Kredi / Banka Kartı</b>
+                      <small>
+                        Kart altyapısı canlıya geçerken bağlanacak.
+                      </small>
+                    </span>
+                  </label>
 
-                  <option>
-                    Havale / EFT
-                  </option>
-
-                  <option>
-                    Kart (entegrasyon sonrası)
-                  </option>
-                </select>
+                  <label>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="Havale / EFT"
+                    />
+                    <span>
+                      <b>Havale / EFT</b>
+                      <small>
+                        {settings.iban
+                          ? `${settings.bankName || "Banka"} • ${settings.iban}`
+                          : "IBAN bilgisi yönetim panelinden eklenir."}
+                      </small>
+                    </span>
+                  </label>
+                </div>
 
                 <input
                   type="hidden"
                   name="cargoFee"
-                  value="0"
+                  value={
+                    cartTotal>=n(settings.freeShippingThreshold)
+                      ? 0
+                      : n(settings.cargoFee)
+                  }
                 />
 
-                <div className="checkoutOrderSummary">
-                  <h3>Sipariş Özeti</h3>
-                  {cart.map(item=>(
-                    <div className="checkoutSummaryItem" key={item.key}>
-                      <img src={imageUrl(item.image)}/>
-                      <div><b>{item.name}</b><span>{item.colorName} • {item.size} • {item.qty} adet</span></div>
-                      <strong>{money(item.price*item.qty)}</strong>
-                    </div>
-                  ))}
-                  <div className="cargoSummary"><span>Kargo</span><b>{cartTotal>=n(settings.freeShippingThreshold) ? "Ücretsiz" : money(settings.cargoFee||0)}</b></div>
-                  <div className="cargoCompanyLine"><span>Kargo Firması</span><b>{settings.defaultCargoCompany || "Aras Kargo"}</b></div>
-                </div>
 
                 <div className="drawerTotal">
                   <span>Toplam</span>
@@ -1908,7 +1903,7 @@ export default function App() {
                   className="orderButton"
                   type="submit"
                 >
-                  SİPARİŞ VER
+                  SİPARİŞİ OLUŞTUR
                 </button>
 
               </>

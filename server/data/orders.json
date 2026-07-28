@@ -586,14 +586,126 @@
     "total": 6300,
     "paymentMethod": "Kapıda / Taslak",
     "paymentStatus": "Bekliyor",
-    "status": "Yeni",
+    "status": "Hazırlanıyor",
     "statusHistory": [
       {
         "status": "Yeni",
         "at": "2026-07-28T01:02:26.499Z"
+      },
+      {
+        "status": "Hazırlanıyor",
+        "at": "2026-07-28T01:37:15.106Z"
       }
     ],
     "createdAt": "2026-07-28T01:02:26.499Z",
+    "cargoCompany": "",
+    "cargoTracking": "",
+    "cargoNote": "",
+    "actualCargoCost": 0,
+    "refundCost": 0
+  },
+  {
+    "id": 11,
+    "orderNo": "SH-000011",
+    "userId": 1,
+    "source": "SHELIVA Web",
+    "customer": {
+      "name": "Ahmet Nergiz",
+      "phone": "905526446258",
+      "email": "ahmetnergizv1@gmail.com",
+      "city": "istanbul",
+      "district": "bayrampaşa",
+      "neighborhood": "kocatepe",
+      "postalCode": "34000",
+      "address": "kocatepe mahallesi 19.sokak no1 daire 12 kutlu apartmanı",
+      "note": ""
+    },
+    "items": [
+      {
+        "key": "3-CLR-1785188957821-1-40",
+        "productId": 3,
+        "code": "SHL-0003",
+        "quality": "26012",
+        "sole": "262505",
+        "name": "bot ",
+        "colorId": "CLR-1785188957821-1",
+        "colorName": "denemeboıttur",
+        "size": "40",
+        "qty": 1,
+        "listPrice": 7000,
+        "discount": 10,
+        "price": 6300,
+        "unitCost": 3700,
+        "image": "/uploads/p3-c1-1785189068706-6esat9.jpg"
+      }
+    ],
+    "subtotal": 6300,
+    "cargoFee": 0,
+    "total": 6300,
+    "paymentMethod": "Havale / EFT",
+    "paymentStatus": "Bekliyor",
+    "status": "Yeni",
+    "statusHistory": [
+      {
+        "status": "Yeni",
+        "at": "2026-07-28T01:38:26.514Z"
+      }
+    ],
+    "createdAt": "2026-07-28T01:38:26.514Z",
+    "cargoCompany": "",
+    "cargoTracking": "",
+    "cargoNote": "",
+    "actualCargoCost": 0,
+    "refundCost": 0
+  },
+  {
+    "id": 12,
+    "orderNo": "SH-000012",
+    "userId": 1,
+    "source": "SHELIVA Web",
+    "customer": {
+      "name": "Ahmet Nergiz",
+      "phone": "905526446258",
+      "email": "ahmetnergizv1@gmail.com",
+      "city": "istanbul",
+      "district": "bayrampaşa",
+      "neighborhood": "kocatepe",
+      "postalCode": "34000",
+      "address": "kocatepe mahallesi 19.sokak no1 daire 12 kutlu apartmanı",
+      "note": ""
+    },
+    "items": [
+      {
+        "key": "1-CLR-1785081278676-3-40",
+        "productId": 1,
+        "code": "SHL-0001",
+        "quality": "",
+        "sole": "",
+        "name": "Terlik Deneme 123",
+        "colorId": "CLR-1785081278676-3",
+        "colorName": "deneme1",
+        "size": "40",
+        "qty": 1,
+        "listPrice": 799,
+        "discount": 12,
+        "price": 703.12,
+        "unitCost": 0,
+        "image": "/uploads/product-1-color-1-1785085393908-trt365.jpg"
+      }
+    ],
+    "subtotal": 703.12,
+    "cargoFee": 3423,
+    "total": 4126.12,
+    "paymentMethod": "Kapıda / Taslak",
+    "paymentStatus": "Bekliyor",
+    "status": "Yeni",
+    "statusHistory": [
+      {
+        "status": "Yeni",
+        "at": "2026-07-28T01:43:29.185Z"
+      }
+    ],
+    "createdAt": "2026-07-28T01:43:29.185Z",
     "cargoCompany": "",
     "cargoTracking": "",
     "cargoNote": "",

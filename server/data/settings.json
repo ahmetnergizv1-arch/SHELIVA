@@ -3,7 +3,7 @@
   "supportPhone": "",
   "supportEmail": "",
   "defaultVatRate": 20,
-  "cargoFee": 0,
+  "cargoFee": 3423,
   "freeShippingThreshold": 2500,
   "orderPrefix": "SH",
   "ticketPrefix": "FIS",
