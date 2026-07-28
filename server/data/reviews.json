@@ -1,1 +1,102 @@
-﻿[]
+[
+  {
+    "id": 1,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 3,
+    "text": "deneme 123123",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:29:35.824Z"
+  },
+  {
+    "id": 2,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 3,
+    "text": "deneme 123123",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:29:37.199Z"
+  },
+  {
+    "id": 3,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 3,
+    "text": "deneme 123123",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:29:37.869Z"
+  },
+  {
+    "id": 4,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 3,
+    "text": "deneme 123123",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:29:38.071Z"
+  },
+  {
+    "id": 5,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 3,
+    "text": "deneme 123123",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:29:38.264Z"
+  },
+  {
+    "id": 6,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 3,
+    "text": "deneme 123123",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:29:38.444Z"
+  },
+  {
+    "id": 7,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 3,
+    "text": "deneme 123123",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:29:38.639Z"
+  },
+  {
+    "id": 8,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 5,
+    "text": "deneme 123123",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:29:40.022Z"
+  },
+  {
+    "id": 9,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 5,
+    "text": "asdasd",
+    "status": "Onaylandı",
+    "createdAt": "2026-07-28T02:31:03.395Z"
+  },
+  {
+    "id": 10,
+    "userId": 1,
+    "userName": "Ahmet Nergiz",
+    "productId": 3,
+    "rating": 5,
+    "text": "asd",
+    "status": "Reddedildi",
+    "createdAt": "2026-07-28T02:32:59.201Z"
+  }
+]

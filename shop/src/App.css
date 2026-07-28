@@ -2163,3 +2163,11 @@ a {
 .featureInfoGrid{
   display:none!important;
 }
+/* SHELIVA V9 */
+.freeShippingCartNotice{margin:0 0 12px;padding:11px 12px;border:1px solid #315c48;background:#112119;color:#d8e8df;font-size:9px;line-height:1.55}
+.freeShippingCartNotice b,.freeShippingCartNotice span{display:block}.freeShippingCartNotice b{color:#55b88f;margin-bottom:2px}
+.checkoutShippingSummary{grid-column:2;background:#fff;border:1px solid #e0e4e6;border-radius:9px;padding:14px 16px;color:#172027}
+.checkoutShippingSummary>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #edf0f2}.checkoutShippingSummary>div:last-of-type{border-bottom:0}.checkoutShippingSummary span{color:#68747d}.checkoutShippingSummary small{display:block;margin-top:8px;color:#2c9b72}
+.anonymousReviewOption{margin:10px 0 2px;padding:11px;border:1px solid #343a36;background:#101311;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.anonymousReviewOption input{width:auto!important;margin-top:3px;accent-color:#2f9f7a}.anonymousReviewOption span,.anonymousReviewOption b,.anonymousReviewOption small{display:block}.anonymousReviewOption b{font-size:10px;color:#eee}.anonymousReviewOption small{margin-top:3px;color:#7f8984!important;line-height:1.4}
+.reviewSentMessage{margin-top:10px;padding:10px 12px;border:1px solid #397357;background:#12291d;color:#6ed49f;font-size:10px;font-weight:700}

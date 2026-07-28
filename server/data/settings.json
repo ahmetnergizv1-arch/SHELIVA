@@ -1,12 +1,12 @@
 {
   "storeName": "SHELİVA",
   "supportPhone": "",
-  "supportEmail": "",
+  "supportEmail": "sd",
   "defaultVatRate": 20,
-  "cargoFee": 3423,
-  "freeShippingThreshold": 2500,
-  "orderPrefix": "SH",
-  "ticketPrefix": "FIS",
+  "cargoFee": 200,
+  "freeShippingThreshold": 2000,
+  "orderPrefix": "",
+  "ticketPrefix": "",
   "cargoCompanies": [
     "Yurtiçi Kargo",
     "Aras Kargo",

@@ -135,6 +135,7 @@ export default function App() {
   const [productTab,setProductTab]=useState("features");
   const [productReviews,setProductReviews]=useState([]);
   const [reviewRating,setReviewRating]=useState(5);
+  const [reviewSent,setReviewSent]=useState(false);
 
   async function refreshProducts() {
     try {
@@ -280,6 +281,18 @@ export default function App() {
         s+n(item.price)*n(item.qty),
       0
     );
+
+  const checkoutCargoFee =
+    cartTotal>0 &&
+    cartTotal<n(settings.freeShippingThreshold)
+      ? n(settings.cargoFee)
+      : 0;
+
+  const checkoutGrandTotal =
+    cartTotal + checkoutCargoFee;
+
+  const freeShippingRemaining =
+    Math.max(0,n(settings.freeShippingThreshold)-cartTotal);
 
   const discounted =
     products.filter(
@@ -539,7 +552,8 @@ export default function App() {
       body:JSON.stringify({
         productId:selected.id,
         rating:reviewRating,
-        text
+        text,
+        anonymous:form.get("anonymous")==="on"
       })
     });
 
@@ -550,8 +564,12 @@ export default function App() {
     }
 
     event.currentTarget.reset();
+    const reviewBox=event.currentTarget.querySelector('textarea[name="reviewText"]');
+    if(reviewBox) reviewBox.value="";
     setReviewRating(5);
-    showToast("Yorumun alındı","Yönetici onayından sonra yayınlanacak.");
+    setReviewSent(true);
+    setTimeout(()=>setReviewSent(false),4200);
+    showToast("Yorum gönderildi","Yönetici onayından sonra yayınlanacak.");
   }
 
   async function placeOrder(event) {
@@ -1262,7 +1280,6 @@ export default function App() {
                 ["features","ÜRÜN ÖZELLİKLERİ"],
                 ["reviews",`YORUMLAR (${productReviews.length})`],
                 ["payment","ÖDEME SEÇENEKLERİ"],
-                ["measurements","ÜRÜN ÖLÇÜLERİ"],
                 ["shipping","KARGO, DEĞİŞİM VE İADELER"],
                 ["faq","S.S.S."]
               ].map(([key,label])=>(
@@ -1308,7 +1325,15 @@ export default function App() {
                       ))}
                     </div>
                     <textarea name="reviewText" placeholder="Ürün hakkındaki deneyimini yaz..." required/>
+                    <label className="anonymousReviewOption">
+                      <input type="checkbox" name="anonymous"/>
+                      <span>
+                        <b>Adımı ve bilgilerimi gizle</b>
+                        <small>Yayınlandığında adın yerine "Gizli Kullanıcı" görünür.</small>
+                      </span>
+                    </label>
                     <button type="submit">YORUMU GÖNDER</button>
+                    {reviewSent && <div className="reviewSentMessage">✓ Yorum gönderildi. Onaydan sonra yayınlanacak.</div>}
                     <small>Yorumun yönetici onayından sonra yayınlanır.</small>
                   </form>
                 </div>
@@ -1328,9 +1353,6 @@ export default function App() {
                 </div>
               )}
 
-              {productTab==="measurements" && (
-                <div><h3>Ürün Ölçüleri</h3><p>{selected.measurements || "Kalıp ve ölçü bilgileri yakında eklenecek."}</p></div>
-              )}
 
               {productTab==="shipping" && (
                 <div><h3>Kargo, Değişim ve İadeler</h3><p>{selected.shippingReturns || "Gönderimler Aras Kargo ile yapılır. Detaylı koşullar yönetim panelinden düzenlenebilir."}</p></div>
@@ -1733,6 +1755,19 @@ export default function App() {
               <div className="drawerBottom">
 
 
+                <div className="freeShippingCartNotice">
+                  {n(settings.freeShippingThreshold)>0 ? (
+                    cartTotal>=n(settings.freeShippingThreshold) ? (
+                      <b>✓ Ücretsiz kargo hakkın aktif.</b>
+                    ) : (
+                      <>
+                        <b>{money(settings.freeShippingThreshold)} ve üzeri ücretsiz kargo</b>
+                        <span>Ücretsiz kargo için {money(freeShippingRemaining)} daha ekle.</span>
+                      </>
+                    )
+                  ) : null}
+                </div>
+
                 <div className="drawerTotal">
                   <span>Toplam</span>
                   <strong>
@@ -1884,18 +1919,20 @@ export default function App() {
                 <input
                   type="hidden"
                   name="cargoFee"
-                  value={
-                    cartTotal>=n(settings.freeShippingThreshold)
-                      ? 0
-                      : n(settings.cargoFee)
-                  }
+                  value={checkoutCargoFee}
                 />
 
+
+                <div className="checkoutShippingSummary">
+                  <div><span>Ara Toplam</span><b>{money(cartTotal)}</b></div>
+                  <div><span>Kargo • Aras Kargo</span><b>{checkoutCargoFee===0 ? "Ücretsiz" : money(checkoutCargoFee)}</b></div>
+                  {n(settings.freeShippingThreshold)>0 && <small>{money(settings.freeShippingThreshold)} ve üzeri siparişlerde kargo ücretsiz.</small>}
+                </div>
 
                 <div className="drawerTotal">
                   <span>Toplam</span>
                   <strong>
-                    {money(cartTotal)}
+                    {money(checkoutGrandTotal)}
                   </strong>
                 </div>
 

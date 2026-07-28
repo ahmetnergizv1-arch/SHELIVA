@@ -416,6 +416,14 @@ export default function App() {
     await refresh();
   }
 
+  async function deleteReview(review) {
+    if(!window.confirm("Bu yorum kalıcı olarak silinsin mi?")) return;
+    const res=await fetch(`${API}/api/reviews/${review.id}`,{method:"DELETE"});
+    if(!res.ok) return alert("Yorum silinemedi.");
+    setReviews(current=>current.filter(item=>item.id!==review.id));
+    await refresh();
+  }
+
   async function setReturnStatus(item,status) {
     const res = await fetch(`${API}/api/returns/${item.id}`,{
       method:"PUT",
@@ -1170,9 +1178,9 @@ export default function App() {
                     <small>{review.createdAt ? new Date(review.createdAt).toLocaleString("tr-TR") : "-"}</small>
                   </div>
                   <div className="managementActions">
-                    <b className={review.status==="Onaylandı" ? "statusGreen" : review.status==="Reddedildi" ? "statusRed" : "statusYellow"}>{review.status || "Bekliyor"}</b>
+                    <b className={review.status==="Onaylandı" ? "statusGreen" : "statusYellow"}>{review.status || "Bekliyor"}</b>
                     {review.status!=="Onaylandı" && <button className="approveButton" onClick={()=>setReviewStatus(review,"Onaylandı")}>ONAYLA</button>}
-                    {review.status!=="Reddedildi" && <button className="rejectButton" onClick={()=>setReviewStatus(review,"Reddedildi")}>REDDET</button>}
+                    <button className="rejectButton" onClick={()=>deleteReview(review)}>SİL</button>
                   </div>
                 </article>
               ))}
@@ -1242,9 +1250,9 @@ export default function App() {
               <label>Mağaza Adı<input value={settings.storeName || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,storeName:e.target.value})}}/></label>
               <label>Destek Telefonu<input value={settings.supportPhone || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,supportPhone:e.target.value})}}/></label>
               <label>Destek E-posta<input value={settings.supportEmail || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,supportEmail:e.target.value})}}/></label>
-              <label>Varsayılan KDV %<input type="number" value={settings.defaultVatRate ?? 20} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,defaultVatRate:n(e.target.value)})}}/></label>
-              <label>Kargo Ücreti<input type="number" value={settings.cargoFee ?? 0} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,cargoFee:n(e.target.value)})}}/></label>
-              <label>Ücretsiz Kargo Limiti<input type="number" value={settings.freeShippingThreshold ?? 2500} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,freeShippingThreshold:n(e.target.value)})}}/></label>
+              <label>Varsayılan KDV %<input type="number" value={settings.defaultVatRate ?? ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,defaultVatRate:e.target.value})}}/></label>
+              <label>Kargo Ücreti<input type="number" value={settings.cargoFee ?? ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,cargoFee:e.target.value})}}/></label>
+              <label>Ücretsiz Kargo Limiti<input type="number" value={settings.freeShippingThreshold ?? ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,freeShippingThreshold:e.target.value})}}/></label>
               <label>Sipariş Ön Eki<input value={settings.orderPrefix || "SH"} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,orderPrefix:e.target.value})}}/></label>
               <label>Üretim Fişi Ön Eki<input value={settings.ticketPrefix || "FIS"} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,ticketPrefix:e.target.value})}}/></label>
               <label>Varsayılan Kargo<input value={settings.defaultCargoCompany || "Aras Kargo"} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,defaultCargoCompany:e.target.value})}}/></label>
