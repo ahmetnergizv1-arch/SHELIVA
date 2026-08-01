@@ -3047,72 +3047,11 @@ a {
 }
 /* SHELIVA_MOBILE_PRODUCT_GALLERY_V5_END */
 
-/* SHELIVA_PC_ACCOUNT_PANEL_COMPACT_V5_START */
-
-/* Yalnizca PC / laptop */
+/* SHELIVA_PC_ACCOUNT_SHIFT_100PX_START */
+/* Eski menu korunur; yalnizca PC'de 100px sola kayar. */
 @media (min-width: 761px) {
-  .accountOverlay {
-    overflow: hidden !important;
-  }
-
   .accountPanel {
-    width: min(800px, calc(100vw - 70px)) !important;
-    max-width: min(800px, calc(100vw - 70px)) !important;
-    max-height: calc(100vh - 30px) !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior-x: none !important;
-  }
-
-  .accountPanel,
-  .accountPanel * {
-    box-sizing: border-box !important;
-    min-width: 0 !important;
-  }
-
-  .accountPanel > *,
-  .accountPanel section,
-  .accountPanel article,
-  .accountPanel div {
-    max-width: 100% !important;
-  }
-
-  .ordersAccountCard {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-  }
-
-  .accountCardTitle {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  .accountOrderTabs {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-  }
-
-  .myOrdersList,
-  .myOrderCard,
-  .accountOrdersEmpty,
-  .accountOrdersSkeleton {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-  }
-
-  .accountPanel::-webkit-scrollbar {
-    width: 8px !important;
-  }
-
-  .accountPanel::-webkit-scrollbar:horizontal,
-  .accountPanel *::-webkit-scrollbar:horizontal {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
+    transform: translateX(-100px) !important;
   }
 }
-
-/* SHELIVA_PC_ACCOUNT_PANEL_COMPACT_V5_END */
+/* SHELIVA_PC_ACCOUNT_SHIFT_100PX_END */
