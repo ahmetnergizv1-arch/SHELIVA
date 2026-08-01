@@ -2,131 +2,49 @@
   {
     "id": 1,
     "code": "SHL-0001",
-    "name": "Terlik Deneme 123",
+    "name": "a",
     "category": "Yazlık",
-    "price": 799,
-    "discount": 12,
-    "active": true,
-    "newest": true,
-    "description": "bu ürğn deneme\n\n\nDEEMEE\n\n\n\n\nDEMNEE\n\n\n\nDENEME\n\nDENE\n\nEDENDEMEM\n\n\n\n\nDENEMENDEEE\n\n\n\n\n\n\n\n\n\nDEBMEME",
-    "image": "/uploads/product-1-color-1-1785085393908-trt365.jpg",
-    "colors": [
-      {
-        "id": "CLR-1785081278676-3",
-        "name": "deneme1",
-        "image": "/uploads/product-1-color-1-1785085393908-trt365.jpg",
-        "sizes": {
-          "36": 1,
-          "37": 10,
-          "38": 3,
-          "39": 0,
-          "40": 3,
-          "41": 0
-        }
-      }
-    ],
-    "createdAt": "2026-07-26T17:03:13.910Z",
-    "stock": 10,
-    "updatedAt": "2026-07-26T17:54:25.490Z",
-    "totalSold": 4
-  },
-  {
-    "id": 2,
-    "code": "SHL-0002",
-    "name": "deneme ayakkabı",
-    "category": "Yazlık",
-    "description": "aa",
-    "price": 2300,
-    "discount": 5,
-    "purchasePrice": 900,
+    "description": "a",
+    "quality": "a",
+    "sole": "a",
+    "price": 0,
+    "discount": 15,
+    "purchasePrice": 0,
     "vatRate": 20,
-    "shippingCost": 200,
+    "shippingCost": 0,
     "packagingCost": 0,
     "otherCost": 0,
     "active": true,
     "newest": true,
     "featured": false,
+    "features": "a",
+    "measurements": "a",
+    "paymentInfo": "a",
+    "shippingReturns": "",
+    "faq": "",
     "colors": [
       {
-        "id": "CLR-1785093788409-1",
-        "name": "kahve",
-        "images": [
-          "/uploads/p2-c1-1785093947123-010c4d.jpg",
-          "/uploads/p2-c1-1785093947123-sd70nj.jpg",
-          "/uploads/p2-c1-1785093947133-tveqdn.jpg",
-          "/uploads/p2-c1-1785093947133-7ab39b.jpg"
-        ],
-        "image": "/uploads/p2-c1-1785093947123-010c4d.jpg",
-        "sizes": {
-          "36": 1,
-          "37": 0,
-          "38": 1,
-          "39": 2,
-          "40": 2,
-          "41": 0
-        }
-      },
-      {
-        "id": "CLR-1785093857314-2",
-        "name": "beyaz",
-        "images": [
-          "/uploads/p2-c2-1785093947134-fgy07j.jpg",
-          "/uploads/p2-c2-1785093947134-rs51nh.jpg",
-          "/uploads/p2-c2-1785093947134-072ko4.jpg"
-        ],
-        "image": "/uploads/p2-c2-1785093947134-fgy07j.jpg",
+        "id": "CLR-1785551504919-1",
+        "name": "a",
+        "images": [],
+        "image": "",
         "sizes": {
           "36": 0,
-          "37": 1,
-          "38": 2,
-          "39": 1,
-          "40": 2,
-          "41": 6
-        }
-      }
-    ],
-    "image": "/uploads/p2-c1-1785093947123-010c4d.jpg",
-    "totalSold": 5,
-    "createdAt": "2026-07-26T19:25:47.135Z"
-  },
-  {
-    "id": 3,
-    "code": "SHL-0003",
-    "name": "bot ",
-    "category": "Yazlık",
-    "description": "denemedir ü,\n\n.\n..\n\n\n\n\n.\n\n.\n\n..\n",
-    "quality": "26012",
-    "sole": "262505",
-    "price": 7000,
-    "discount": 10,
-    "purchasePrice": 3000,
-    "vatRate": 10,
-    "shippingCost": 200,
-    "packagingCost": 100,
-    "otherCost": 100,
-    "active": true,
-    "newest": true,
-    "featured": false,
-    "colors": [
-      {
-        "id": "CLR-1785188957821-1",
-        "name": "denemeboıttur",
-        "images": [
-          "/uploads/p3-c1-1785189068706-6esat9.jpg"
-        ],
-        "image": "/uploads/p3-c1-1785189068706-6esat9.jpg",
-        "sizes": {
-          "36": 8,
-          "37": 0,
+          "37": 330,
           "38": 0,
           "39": 0,
-          "40": 37,
+          "40": 0,
           "41": 0
         }
       }
     ],
-    "image": "/uploads/p3-c1-1785189068706-6esat9.jpg",
-    "totalSold": 8,
-    "createdAt": "2026-07-27T21:51:08.707Z"
+    "image": "",
+    "totalSold": 1,
+    "createdAt": "2026-08-01T02:31:51.135Z",
+    "stock": 0,
+    "salePrice": 0,
+    "totalCost": 0,
+    "grossProfit": 0,
+    "updatedAt": "2026-08-01T02:33:46.314Z"
   }
 ]

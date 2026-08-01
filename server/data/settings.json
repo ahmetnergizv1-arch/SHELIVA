@@ -1,11 +1,11 @@
 {
   "storeName": "SHELİVA",
   "supportPhone": "",
-  "supportEmail": "sd",
-  "defaultVatRate": 20,
+  "supportEmail": "shelivashoes@gmail.com",
+  "defaultVatRate": "0",
   "cargoFee": 200,
-  "freeShippingThreshold": 2000,
-  "orderPrefix": "",
+  "freeShippingThreshold": "0",
+  "orderPrefix": "SH",
   "ticketPrefix": "",
   "cargoCompanies": [
     "Yurtiçi Kargo",
@@ -14,5 +14,7 @@
     "Sürat Kargo",
     "PTT Kargo"
   ],
-  "otpMode": "test"
+  "otpMode": "test",
+  "instagramUrl": "https://www.instagram.com/shelivashoes/",
+  "whatsappUrl": "905526446258"
 }

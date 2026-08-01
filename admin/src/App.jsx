@@ -353,6 +353,31 @@ export default function App() {
     status,
     extra={}
   ) {
+    // ODEME_ONAY_ADMIN_V1
+    if(status==="Hazırlanıyor" && order.paymentStatus!=="Ödendi"){
+      const paymentApproved = window.confirm(
+        `${order.orderNo} için ödemeyi aldığını onaylıyor musun?\n\n` +
+        "Onayladığında stok düşecek ve sipariş hazırlanıyor durumuna geçecek."
+      );
+
+      if(!paymentApproved) return;
+
+      const paymentRes = await fetch(
+        `${API}/api/orders/${order.id}/approve-payment`,
+        {method:"POST"}
+      );
+
+      const paymentData = await paymentRes.json();
+
+      if(!paymentRes.ok){
+        return alert(paymentData.error || "Ödeme onaylanamadı.");
+      }
+
+      setSelectedOrder(null);
+      alert("Ödeme onaylandı. Sipariş hazırlanıyor.");
+      await refresh();
+      return;
+    }
     const messages = {
       "Hazırlanıyor":`${order.orderNo} siparişi HAZIRLAMAYA alınacak. Onaylıyor musun?`,
       "Kargoya Verildi":`${order.orderNo} siparişi KARGOYA VERİLDİ olarak işaretlenecek. Onaylıyor musun?`,
@@ -1259,10 +1284,10 @@ export default function App() {
               <label>Banka Adı<input value={settings.bankName || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,bankName:e.target.value})}}/></label>
               <label>IBAN<input value={settings.iban || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,iban:e.target.value})}}/></label>
               <label>Hesap Sahibi<input value={settings.accountHolder || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,accountHolder:e.target.value})}}/></label>
-              <label>Instagram Linki<input value={settings.instagramUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,instagramUrl:e.target.value})}}/></label>
+              <label>Instagram kullanici adi veya linki<input placeholder="sheliva veya https://instagram.com/sheliva" value={settings.instagramUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,instagramUrl:e.target.value})}}/></label>
               <label>YouTube Linki<input value={settings.youtubeUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,youtubeUrl:e.target.value})}}/></label>
               <label>TikTok Linki<input value={settings.tiktokUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,tiktokUrl:e.target.value})}}/></label>
-              <label>WhatsApp Linki<input value={settings.whatsappUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,whatsappUrl:e.target.value})}}/></label>
+              <label>WhatsApp numarasi<input placeholder="905xxxxxxxxx" value={settings.whatsappUrl || ""} onChange={e=>{settingsDirtyRef.current=true;setSettings({...settings,whatsappUrl:e.target.value})}}/></label>
             </div>
           </section>
         )}
@@ -2272,7 +2297,7 @@ function OrderModal({
                 )
               }
             >
-              HAZIRLAMAYA AL
+              ÖDEMEYİ ONAYLA VE HAZIRLA
             </button>
           )}
 

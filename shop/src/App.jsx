@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
 const API = "http://localhost:3001";
@@ -70,6 +70,9 @@ export default function App() {
 
   const [toast,setToast]=useState(null);
   const [accountOpen,setAccountOpen]=useState(false);
+  const [myOrders,setMyOrders]=useState([]);
+  const [myOrdersLoading,setMyOrdersLoading]=useState(false);
+  const [ordersExpanded,setOrdersExpanded]=useState(false);
 
   const [savedAddress,setSavedAddress]=useState(
     () => {
@@ -321,6 +324,76 @@ export default function App() {
     bestSellers[0] ||
     discounted[0] ||
     products[0];
+
+  async function loadMyOrders() {
+    if(!authToken){
+      setAuthMode("login");
+      setAuthOpen(true);
+      return;
+    }
+
+    setMyOrdersLoading(true);
+    try{
+      const res=await fetch(`${API}/api/account/orders`,{
+        headers:{Authorization:`Bearer ${authToken}`}
+      });
+      if(!res.ok) throw new Error();
+      setMyOrders(await res.json());
+    }catch{
+      setMyOrders([]);
+      showToast("Siparişler yüklenemedi","Tekrar giriş yapmayı dene.","error");
+    }finally{
+      setMyOrdersLoading(false);
+    }
+  }
+
+  function openAccountOrders(){
+    if(!authUser){
+      setAuthMode("login");
+      setAuthOpen(true);
+      return;
+    }
+    setAccountOpen(true);
+    setOrdersExpanded(true);
+    loadMyOrders();
+  }
+
+  function statusLabel(order){
+    if(order.paymentStatus!=="Ödendi") return "Ödeme Onayı Bekleniyor";
+    return order.status || "Hazırlanıyor";
+  }
+
+  function buildOrderMessage(order,channel){
+    const lines=(order.items||[]).map((item,index)=>
+      `${index+1}. ${item.name} • ${item.colorName} • ${item.size} numara • ${item.qty} adet`
+    );
+    return [
+      "Merhaba SHELIVA, sipariş talebim için ödeme yapmak istiyorum.",
+      `Sipariş No: ${order.orderNo}`,
+      "",
+      ...lines,
+      "",
+      `Toplam: ${money(order.total)}`,
+      `İletişim: ${channel}`
+    ].join("\n");
+  }
+
+  function openWhatsAppOrder(order){
+    const raw=String(settings.whatsappUrl||settings.supportPhone||"").trim();
+    const digits=raw.replace(/\D/g,"");
+    if(!digits) return showToast("WhatsApp numarası ayarlanmamış","Yönetim panelinden numarayı ekle.","error");
+    const number=digits.startsWith("0")?`9${digits}`:(digits.length===10?`90${digits}`:digits);
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(buildOrderMessage(order,"WhatsApp"))}`,"_blank","noopener,noreferrer");
+  }
+
+  async function openInstagramOrder(order){
+    const raw=String(settings.instagramUrl||"").trim();
+    if(!raw) return showToast("Instagram hesabı ayarlanmamış","Yönetim panelinden hesabı ekle.","error");
+    const username=raw.replace(/^https?:\/\/(www\.)?instagram\.com\//i,"").replace(/^@/,"").replace(/\/$/,"");
+    try{await navigator.clipboard.writeText(buildOrderMessage(order,"Instagram"));}catch{}
+    showToast("Sipariş bilgileri kopyalandı","Instagram DM alanına yapıştırabilirsin.");
+    window.open(`https://www.instagram.com/${username}/`,"_blank","noopener,noreferrer");
+  }
 
   function showToast(message,detail="",type="success") {
     setToast({message,detail,type});
@@ -575,6 +648,20 @@ export default function App() {
   async function placeOrder(event) {
     event.preventDefault();
 
+    if(!authToken || !authUser){
+      setAuthMode("login");
+      setAuthOpen(true);
+      showToast("Sipariş için hesap gerekli","Giriş yaptıktan sonra sepetin korunacak.","error");
+      return;
+    }
+
+    const approved=window.confirm(
+      "Sipariş talebini oluşturmak istiyor musunuz?\n\n"+
+      "Ödeme WhatsApp veya Instagram DM üzerinden yapılacaktır. "+
+      "Sipariş, ödeme yönetici tarafından onaylanana kadar kesinleşmez ve stoktan düşmez."
+    );
+    if(!approved) return;
+
     const form =
       new FormData(
         event.currentTarget
@@ -589,7 +676,7 @@ export default function App() {
       paymentMethod:
         form.get("paymentMethod"),
 
-      paymentStatus:"Bekliyor",
+      paymentStatus:"Onay Bekliyor",
 
       customer:{
         name:form.get("name"),
@@ -729,6 +816,13 @@ export default function App() {
               }
             />
           </div>
+
+          <button
+            className="headerAccount"
+            onClick={openAccountOrders}
+          >
+            SİPARİŞLERİM
+          </button>
 
           <button
             className="headerAccount"
@@ -1384,7 +1478,7 @@ export default function App() {
             <button onClick={()=>goHome("Son Gelenler")}>Son Gelenler</button>
           </section>
 
-          <section><b>MÜŞTERİ</b><span>Sipariş Takibi</span><span>Kargo & Teslimat</span><span>İade / Değişim</span><span>Gizlilik</span></section>
+          <section><b>MÜŞTERİ</b><button onClick={openAccountOrders}>Sipariş Takibi</button><span>Kargo & Teslimat</span><span>İade / Değişim</span><span>Gizlilik</span></section>
           <section><b>SHELİVA</b><span>Hakkımızda</span><span>İletişim</span><span>Üretim</span><span>Sık Sorulan Sorular</span></section>
         </div>
 
@@ -1514,12 +1608,78 @@ export default function App() {
 
               </section>
 
-              <section className="accountMenuCard">
-                <b>SİPARİŞLERİM</b>
-                <p>
-                  Sipariş geçmişi ve takip sistemi
-                  bir sonraki aşamada burada olacak.
-                </p>
+              <section className="accountMenuCard ordersAccountCard">
+                <div className="accountCardTitle">
+                  <b>SON SİPARİŞLERİM</b>
+                  <button
+                    onClick={()=>{
+                      const next=!ordersExpanded;
+                      setOrdersExpanded(next);
+                      if(next) loadMyOrders();
+                    }}
+                  >
+                    {ordersExpanded ? "KAPAT" : "GÖRÜNTÜLE"}
+                  </button>
+                </div>
+
+                {!ordersExpanded ? (
+                  <p>Siparişlerinin güncel durumunu ve kargo bilgilerini görüntüle.</p>
+                ) : myOrdersLoading ? (
+                  <p>Siparişler yükleniyor...</p>
+                ) : myOrders.length===0 ? (
+                  <div className="emptyOrders">
+                    <strong>Henüz siparişiniz yok</strong>
+                    <span>Oluşturduğunuz siparişler burada görünecek.</span>
+                  </div>
+                ) : (
+                  <div className="myOrdersList">
+                    {myOrders.map(order=>(
+                      <article className="myOrderCard" key={order.id}>
+                        <div className="myOrderHead">
+                          <div>
+                            <b>{order.orderNo}</b>
+                            <small>{new Date(order.createdAt).toLocaleString("tr-TR")}</small>
+                          </div>
+                          <span className={`orderStatus status-${String(order.status||"bekliyor").toLocaleLowerCase("tr").replaceAll(" ","-")}`}>
+                            {statusLabel(order)}
+                          </span>
+                        </div>
+
+                        <div className="orderProgress">
+                          {["Ödeme Onayı","Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].map((step,index)=>{
+                            const current=order.paymentStatus!=="Ödendi" ? 0 : ({"Hazırlanıyor":1,"Kargoya Verildi":2,"Teslim Edildi":3}[order.status] ?? 1);
+                            return <span className={index<=current?"done":""} key={step}>{step}</span>;
+                          })}
+                        </div>
+
+                        <div className="myOrderItems">
+                          {(order.items||[]).map((item,index)=>(
+                            <div key={`${order.id}-${index}`}>
+                              <span>{item.name} • {item.colorName} • {item.size} numara</span>
+                              <b>{item.qty} adet</b>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="myOrderInfo">
+                          <span><b>Ödeme:</b> {order.paymentStatus||"Bekliyor"}</span>
+                          <span><b>Toplam:</b> {money(order.total)}</span>
+                          {order.cargoCompany && <span><b>Kargo:</b> {order.cargoCompany}</span>}
+                          {order.cargoTracking && <span><b>Takip Kodu:</b> {order.cargoTracking}</span>}
+                          {order.cargoNote && <span><b>Kargo Notu:</b> {order.cargoNote}</span>}
+                          {order.customer?.note && <span><b>Sipariş Notu:</b> {order.customer.note}</span>}
+                        </div>
+
+                        {order.paymentStatus!=="Ödendi" && (
+                          <div className="orderContactButtons">
+                            <button onClick={()=>openWhatsAppOrder(order)}>WHATSAPP İLE ÖDEME</button>
+                            <button onClick={()=>openInstagramOrder(order)}>INSTAGRAM İLE SİPARİŞ VER</button>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
               </section>
 
               <section className="accountMenuCard">
@@ -1816,8 +1976,8 @@ export default function App() {
                 {!authUser && (
                   <div className="guestCheckoutInfo">
                     <div>
-                      <b>Üye olmadan devam edebilirsin.</b>
-                      <span>Hesap oluşturursan siparişlerini daha sonra hesabından takip edebilirsin.</span>
+                      <b>Sipariş oluşturmak için giriş yapmalısın.</b>
+                      <span>Böylece sipariş durumunu ve kargo takip kodunu hesabından görebilirsin.</span>
                     </div>
                     <button type="button" onClick={()=>setAuthOpen(true)}>ÜYE OL / GİRİŞ YAP</button>
                   </div>
@@ -1883,37 +2043,18 @@ export default function App() {
                   placeholder="Sipariş notu"
                 />
 
-                <div className="paymentChoices">
+                <div className="paymentChoices contactPaymentChoices">
                   <label>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="Kredi / Banka Kartı"
-                      defaultChecked
-                    />
+                    <input type="radio" name="paymentMethod" value="WhatsApp / Instagram" defaultChecked />
                     <span>
-                      <b>Kredi / Banka Kartı</b>
-                      <small>
-                        Kart altyapısı canlıya geçerken bağlanacak.
-                      </small>
+                      <b>WhatsApp veya Instagram üzerinden ödeme</b>
+                      <small>Sipariş talebini oluşturduktan sonra iletişime geçip IBAN bilgilerini alacaksın.</small>
                     </span>
                   </label>
+                </div>
 
-                  <label>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="Havale / EFT"
-                    />
-                    <span>
-                      <b>Havale / EFT</b>
-                      <small>
-                        {settings.iban
-                          ? `${settings.bankName || "Banka"} • ${settings.iban}`
-                          : "IBAN bilgisi yönetim panelinden eklenir."}
-                      </small>
-                    </span>
-                  </label>
+                <div className="checkoutNotice">
+                  Sipariş talebi oluşturulduğunda stok hemen düşmez. Ödeme kontrol edilip yönetici tarafından onaylandığında sipariş hazırlanır.
                 </div>
 
                 <input
@@ -1945,34 +2086,32 @@ export default function App() {
 
               </>
             ) : (
-              <div className="success">
-
+              <div className="success orderRequestSuccess">
                 <b>✓</b>
-
-                <h3>
-                  Sipariş Alındı
-                </h3>
-
-                <p>
-                  Sipariş No:
-                </p>
-
-                <strong>
-                  {orderSuccess.orderNo}
-                </strong>
-
+                <h3>Sipariş Talebin Oluşturuldu</h3>
+                <p>Sipariş No:</p>
+                <strong>{orderSuccess.orderNo}</strong>
+                <div className="successWarning">
+                  Ödeme WhatsApp veya Instagram DM üzerinden yapılacaktır. Ödeme onaylanana kadar sipariş kesinleşmez ve stoktan düşmez.
+                </div>
+                <div className="successContactButtons">
+                  <button type="button" onClick={()=>openWhatsAppOrder(orderSuccess)}>WHATSAPP İLE ÖDEME YAP</button>
+                  <button type="button" onClick={()=>openInstagramOrder(orderSuccess)}>INSTAGRAM İLE SİPARİŞ VER</button>
+                </div>
                 <button
                   type="button"
+                  className="secondarySuccessButton"
                   onClick={()=>{
                     setOrderSuccess(null);
                     setCheckout(false);
                     setCartOpen(false);
-                    goHome();
+                    setAccountOpen(true);
+                    setOrdersExpanded(true);
+                    loadMyOrders();
                   }}
                 >
-                  TAMAM
+                  SİPARİŞLERİMDE GÖR
                 </button>
-
               </div>
             )}
 
