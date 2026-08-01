@@ -87,6 +87,7 @@ export default function App() {
   const [myOrders,setMyOrders]=useState([]);
   const [myOrdersLoading,setMyOrdersLoading]=useState(false);
   const [ordersExpanded,setOrdersExpanded]=useState(false);
+  const [orderLightbox,setOrderLightbox]=useState(""); // SHELIVA_ORDER_LIGHTBOX_V2
 
   const [savedAddress,setSavedAddress]=useState(
     () => {
@@ -306,6 +307,22 @@ export default function App() {
   },[]);
 
   useEffect(()=>{
+    if(!accountOpen||!authToken) return;
+    loadMyOrders();
+    const timer=setInterval(loadMyOrders,2500);
+    return ()=>clearInterval(timer);
+  },[accountOpen,authToken]);
+
+  useEffect(()=>{
+    const click=e=>{
+      const img=e.target.closest?.(".accountPanel img,.ordersAccountCard img");
+      if(img?.src) setOrderLightbox(img.src);
+    };
+    document.addEventListener("click",click);
+    return ()=>document.removeEventListener("click",click);
+  },[]);
+
+  useEffect(()=>{
     if(!selected?.id){
       setProductReviews([]);
       return;
@@ -444,11 +461,12 @@ export default function App() {
   }
 
   const categoryCards=useMemo(()=>{
+    const normalize=value=>String(value||"").toLocaleUpperCase("tr-TR").replace(/\s+/g," ").trim();
     const newest=[...products].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
 
     const definitions=[
-      ["YAZLIK","Yazlık",products.filter(p=>p.category==="Yazlık")],
-      ["KIŞLIK","Kışlık",products.filter(p=>p.category==="Kışlık")],
+      ["YAZLIK","Yazlık",products.filter(p=>normalize(p.category).includes("YAZ"))],
+      ["KIŞLIK","Kışlık",products.filter(p=>normalize(p.category).includes("KIŞ")||normalize(p.category).includes("KIS"))],
       ["İNDİRİMDEKİLER","İndirimde",products.filter(p=>n(p.discount)>0)]
     ];
 
@@ -1797,6 +1815,13 @@ export default function App() {
 
         <div className="footerBottom"><span>© 2026 SHELİVA</span><span>Güvenli alışveriş • Gerçek stok</span></div>
       </footer>
+
+      {orderLightbox && (
+        <div className="shelivaLightbox" onClick={()=>setOrderLightbox("")}>
+          <button onClick={()=>setOrderLightbox("")}>×</button>
+          <img src={orderLightbox} onClick={e=>e.stopPropagation()}/>
+        </div>
+      )}
 
       {authOpen && (
         <div className="authOverlay">

@@ -509,3 +509,24 @@ main{padding:30px 34px 50px;min-width:0}
   .orderModalPro .productionPrice{grid-column:2}
   .orderModalPro .productionInfo{grid-template-columns:1fr 1fr!important}
 }
+/* SHELIVA_ORDER_ADMIN_PRO_V3 */
+.orderQuickActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.orderQuickActions button{border:0;border-radius:9px;padding:11px 13px;font-weight:800}
+.orderQuickActions .quickApprove{background:#111;color:#fff}
+.orderQuickActions .quickCancel{background:#fff0f0;color:#b42318;border:1px solid #ffc9c9}
+.orderCardItem{display:flex!important;align-items:center;gap:12px}
+.orderCardItem img{width:58px;height:58px;border-radius:10px;object-fit:cover;cursor:zoom-in;border:1px solid #ddd}
+.productionOrderLine .orderProductPhoto img{cursor:zoom-in}
+.productionName{grid-column:1/-1;background:#f7f8f8;padding:10px;border-radius:10px}
+.adminConfirmShade{position:fixed;inset:0;z-index:20000;background:rgba(8,10,10,.66);display:grid;place-items:center;padding:22px;backdrop-filter:blur(8px)}
+.adminConfirmBox{width:min(480px,100%);background:#fff;border-radius:24px;padding:30px;box-shadow:0 30px 100px rgba(0,0,0,.35);text-align:center}
+.confirmIcon{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:#e9f8f0;color:#24956c;font-size:32px;font-weight:900;margin:0 auto 14px}
+.adminConfirmBox small{color:#888;letter-spacing:2px}.adminConfirmBox h2{margin:8px 0}.adminConfirmBox p{color:#666;line-height:1.55}
+.confirmOrderSummary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}
+.confirmOrderSummary span{background:#f5f6f6;padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:4px}
+.confirmButtons{display:grid;grid-template-columns:1fr 1fr;gap:10px}.confirmButtons button{padding:14px;border:0;border-radius:12px;font-weight:900}.confirmButtons button:last-child{background:#249d74;color:white}.confirmButtons .danger{background:#b42318!important}
+.adminToast{position:fixed;right:25px;top:25px;z-index:25000;background:#123b2d;color:#fff;padding:16px 20px;border-radius:14px;box-shadow:0 16px 50px rgba(0,0,0,.25);font-weight:800}.adminToast.error{background:#7d1919}
+.adminLightbox{position:fixed;inset:0;z-index:30000;background:rgba(0,0,0,.9);display:grid;place-items:center;padding:30px}
+.adminLightbox img{max-width:94vw;max-height:90vh;object-fit:contain;border-radius:14px}
+.adminLightbox button{position:fixed;right:24px;top:18px;width:48px;height:48px;border-radius:50%;border:1px solid #666;background:#111;color:#fff;font-size:30px}
+@media(max-width:800px){.orderBottomPro{align-items:flex-start}.orderQuickActions{justify-content:flex-start}.confirmOrderSummary{grid-template-columns:1fr}}

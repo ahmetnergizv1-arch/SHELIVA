@@ -2271,3 +2271,8 @@ a {
 .authForm label{
   gap:8px;
 }
+/* SHELIVA_LIGHTBOX_PRO_V2 */
+.accountPanel img,.ordersAccountCard img{cursor:zoom-in}
+.shelivaLightbox{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);display:grid;place-items:center;padding:30px}
+.shelivaLightbox img{max-width:min(1000px,94vw);max-height:90vh;object-fit:contain;border-radius:14px;box-shadow:0 30px 100px rgba(0,0,0,.6)}
+.shelivaLightbox button{position:fixed;right:26px;top:20px;width:46px;height:46px;border:1px solid #555;border-radius:50%;background:#111;color:#fff;font-size:30px}

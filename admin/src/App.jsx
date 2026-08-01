@@ -195,6 +195,10 @@ export default function App() {
   const [selectedOrder,setSelectedOrder] =
     useState(null);
 
+  const [adminConfirm,setAdminConfirm]=useState(null);
+  const [adminToast,setAdminToast]=useState(null);
+  const [adminLightbox,setAdminLightbox]=useState("");
+
   const [cargoDraft,setCargoDraft] =
     useState({
       company:"Aras Kargo",
@@ -411,73 +415,54 @@ export default function App() {
     await refresh();
   }
 
-  async function changeOrderStatus(
-    order,
-    status,
-    extra={}
-  ) {
-    // ODEME_ONAY_ADMIN_V1
-    if(status==="Hazırlanıyor" && order.paymentStatus!=="Ödendi"){
-      const paymentApproved = window.confirm(
-        `${order.orderNo} için ödemeyi aldığını onaylıyor musun?\n\n` +
-        "Onayladığında stok düşecek ve sipariş hazırlanıyor durumuna geçecek."
-      );
+  function showAdminToast(message,type="success"){
+    setAdminToast({message,type});
+    setTimeout(()=>setAdminToast(null),3000);
+  }
 
-      if(!paymentApproved) return;
+  function changeOrderStatus(order,status,extra={}){
+    const title=status==="İptal" ? "Siparişi İptal Et" :
+      status==="Hazırlanıyor" && order.paymentStatus!=="Ödendi" ? "Ödemeyi Onayla" :
+      `Siparişi ${status} Yap`;
 
-      const paymentRes = await adminFetch(
-        `${API}/api/orders/${order.id}/approve-payment`,
-        {method:"POST"}
-      );
+    const text=status==="İptal"
+      ? "Sipariş iptal edilecek ve ayrılan stok otomatik geri eklenecek."
+      : status==="Hazırlanıyor" && order.paymentStatus!=="Ödendi"
+        ? "Ödeme onaylanacak ve sipariş hazırlanıyor durumuna geçirilecek."
+        : `Sipariş ${status} durumuna geçirilecek.`;
 
-      const paymentData = await paymentRes.json();
+    setAdminConfirm({order,status,extra,title,text});
+  }
 
-      if(!paymentRes.ok){
-        return alert(paymentData.error || "Ödeme onaylanamadı.");
+  async function executeOrderAction(){
+    const action=adminConfirm;
+    if(!action) return;
+    const {order,status,extra}=action;
+    setAdminConfirm({...action,busy:true});
+
+    try{
+      let res;
+      if(status==="Hazırlanıyor" && order.paymentStatus!=="Ödendi"){
+        res=await adminFetch(`${API}/api/orders/${order.id}/approve-payment`,{method:"POST"});
+      }else{
+        res=await adminFetch(`${API}/api/orders/${order.id}/status`,{
+          method:"PUT",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({status,...extra})
+        });
       }
 
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error||"Sipariş güncellenemedi.");
+
+      setAdminConfirm(null);
       setSelectedOrder(null);
-      alert("Ödeme onaylandı. Sipariş hazırlanıyor.");
+      showAdminToast(status==="İptal" ? "Sipariş iptal edildi ve stok geri eklendi." : "Sipariş başarıyla güncellendi.");
       await refresh();
-      return;
+    }catch(error){
+      setAdminConfirm(null);
+      showAdminToast(error.message||"İşlem başarısız.","error");
     }
-    const messages = {
-      "Hazırlanıyor":`${order.orderNo} siparişi HAZIRLAMAYA alınacak. Onaylıyor musun?`,
-      "Kargoya Verildi":`${order.orderNo} siparişi KARGOYA VERİLDİ olarak işaretlenecek. Onaylıyor musun?`,
-      "Teslim Edildi":`${order.orderNo} siparişi TESLİM EDİLDİ olarak işaretlenecek. Onaylıyor musun?`,
-      "İptal":`${order.orderNo} siparişi iptal edilecek. Onaylıyor musun?`
-    };
-
-    if(!window.confirm(messages[status] || `${order.orderNo} sipariş durumu değiştirilecek. Onaylıyor musun?`)){
-      return;
-    }
-
-    const res =
-      await adminFetch(
-        `${API}/api/orders/${order.id}/status`,
-        {
-          method:"PUT",
-
-          headers:{
-            "Content-Type":"application/json"
-          },
-
-          body:
-            JSON.stringify({
-              status,
-              ...extra
-            })
-        }
-      );
-
-    if (!res.ok) {
-      return alert(
-        "Sipariş güncellenemedi."
-      );
-    }
-
-    setSelectedOrder(null);
-    await refresh();
   }
 
   async function revertOrder(order) {
@@ -931,7 +916,8 @@ export default function App() {
                 "Yeni",
                 "Hazırlanıyor",
                 "Kargoya Verildi",
-                "Teslim Edildi"
+                "Teslim Edildi",
+                "İptal"
               ].map(status => (
                 <button
                   key={status}
@@ -997,32 +983,33 @@ export default function App() {
 
                       {(order.items||[])
                         .map(item => (
-                          <div key={item.key}>
-                            <span>{item.name}</span>
-                            <small>
-                              {item.colorName}
-                              {" • "}
-                              {item.size}
-                              {" • "}
-                              {item.qty} adet
-                            </small>
+                          <div className="orderCardItem" key={item.key}>
+                            {item.image && (
+                              <img
+                                src={item.image.startsWith("/uploads/") ? API+item.image : item.image}
+                                onClick={()=>setAdminLightbox(item.image.startsWith("/uploads/") ? API+item.image : item.image)}
+                              />
+                            )}
+                            <div>
+                              <span>{item.name}</span>
+                              <small>{item.colorName} • {item.size} numara • {item.qty} adet</small>
+                            </div>
                           </div>
                         ))}
 
                     </div>
 
-                    <div className="orderBottom">
-                      <strong>
-                        {money(order.total)}
-                      </strong>
-
-                      <button
-                        onClick={()=>
-                          setSelectedOrder(order)
-                        }
-                      >
-                        DETAY
-                      </button>
+                    <div className="orderBottom orderBottomPro">
+                      <strong>{money(order.total)}</strong>
+                      <div className="orderQuickActions">
+                        {order.status==="Yeni" && (
+                          <button className="quickApprove" onClick={()=>changeOrderStatus(order,"Hazırlanıyor")}>ÖDEMEYİ ONAYLA</button>
+                        )}
+                        {order.status!=="İptal" && order.status!=="Teslim Edildi" && (
+                          <button className="quickCancel" onClick={()=>changeOrderStatus(order,"İptal")}>SİPARİŞİ İPTAL ET</button>
+                        )}
+                        <button onClick={()=>setSelectedOrder(order)}>DETAY</button>
+                      </div>
                     </div>
 
                   </article>
@@ -1498,31 +1485,35 @@ export default function App() {
           changeStatus={changeOrderStatus}
           revertOrder={revertOrder}
         />
+      )}      {adminLightbox && (
+        <div className="adminLightbox" onClick={()=>setAdminLightbox("")}>
+          <button onClick={()=>setAdminLightbox("")}>×</button>
+          <img src={adminLightbox} onClick={e=>e.stopPropagation()}/>
+        </div>
       )}
 
-      {/* SHELIVA_ORDER_CANCEL_BUTTON_V1 */}
-      {selectedOrder && selectedOrder.status!=="İptal" && (
-        <button
-          type="button"
-          onClick={()=>changeOrderStatus(selectedOrder,"İptal")}
-          style={{
-            position:"fixed",
-            right:28,
-            bottom:28,
-            zIndex:5000,
-            border:0,
-            borderRadius:12,
-            padding:"14px 18px",
-            background:"#b42318",
-            color:"#fff",
-            fontWeight:800,
-            cursor:"pointer",
-            boxShadow:"0 12px 34px rgba(180,35,24,.35)"
-          }}
-        >
-          SİPARİŞİ İPTAL ET
-        </button>
+      {adminConfirm && (
+        <div className="adminConfirmShade" onMouseDown={e=>e.target===e.currentTarget&&setAdminConfirm(null)}>
+          <div className="adminConfirmBox">
+            <div className="confirmIcon">{adminConfirm.status==="İptal" ? "!" : "✓"}</div>
+            <small>{adminConfirm.order.orderNo}</small>
+            <h2>{adminConfirm.title}</h2>
+            <p>{adminConfirm.text}</p>
+            <div className="confirmOrderSummary">
+              <span>Müşteri <b>{adminConfirm.order.customer?.name}</b></span>
+              <span>Tutar <b>{money(adminConfirm.order.total)}</b></span>
+            </div>
+            <div className="confirmButtons">
+              <button onClick={()=>setAdminConfirm(null)} disabled={adminConfirm.busy}>VAZGEÇ</button>
+              <button className={adminConfirm.status==="İptal"?"danger":""} onClick={executeOrderAction} disabled={adminConfirm.busy}>
+                {adminConfirm.busy ? "İŞLENİYOR..." : "ONAYLA"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
+
+      {adminToast && <div className={`adminToast ${adminToast.type}`}>{adminToast.message}</div>}
 
     </div>
   );
@@ -2329,11 +2320,8 @@ function OrderModal({
   <div className="orderProductPhoto">
     {item.image ? (
       <img
-        src={
-          item.image.startsWith("/uploads/")
-            ? API+item.image
-            : item.image
-        }
+        src={item.image.startsWith("/uploads/") ? API+item.image : item.image}
+        onClick={()=>setAdminLightbox(item.image.startsWith("/uploads/") ? API+item.image : item.image)}
       />
     ) : (
       <span>FOTOĞRAF</span>
@@ -2341,6 +2329,10 @@ function OrderModal({
   </div>
 
   <div className="productionInfo">
+    <div className="productionName">
+      <small>ÜRÜN</small>
+      <b>{item.name}</b>
+    </div>
     <div>
       <small>İŞ KALİTESİ</small>
       <b>{item.quality || "-"}</b>
