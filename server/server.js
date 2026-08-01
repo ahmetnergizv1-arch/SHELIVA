@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
@@ -21,6 +21,34 @@ function verify(p,x){try{const [s,h]=String(x).split(":"),a=crypto.scryptSync(St
 const safe=u=>{if(!u)return null;const x={...u};delete x.passwordHash;return x}; const token=()=>crypto.randomBytes(32).toString("hex");
 function auth(req){const t=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"");const s=read(F.sessions,[]).find(x=>x.token===t&&new Date(x.expiresAt).getTime()>Date.now());return s?read(F.users,[]).find(u=>n(u.id)===n(s.userId)):null}
 function need(req,res,next){const u=auth(req);if(!u)return res.status(401).json({error:"Giriş yapman gerekiyor."});req.user=u;next()}
+
+/* SHELIVA_ADMIN_SECURITY_V1 */
+const adminSessions=new Map();
+const ADMIN_SESSION_MS=12*60*60*1000;
+
+function cleanAdminSessions(){
+  const t=Date.now();
+  for(const [key,value] of adminSessions){
+    if(value.expiresAt<=t) adminSessions.delete(key);
+  }
+}
+
+function adminTokenFrom(req){
+  return String(req.headers.authorization||"").replace(/^Bearer\s+/i,"");
+}
+
+function needAdmin(req,res,next){
+  cleanAdminSessions();
+  const t=adminTokenFrom(req);
+  const session=adminSessions.get(t);
+
+  if(!t||!session||session.expiresAt<=Date.now()){
+    return res.status(401).json({error:"Yönetici girişi gerekli."});
+  }
+
+  session.expiresAt=Date.now()+ADMIN_SESSION_MS;
+  next();
+}
 const sale=p=>Math.round(n(p.price)*(1-Math.max(0,Math.min(100,n(p.discount)))/100)*100)/100;
 const cost=p=>{const buy=n(p.purchasePrice),vat=buy*n(p.vatRate)/100;return Math.round((buy+vat+n(p.shippingCost)+n(p.packagingCost)+n(p.otherCost))*100)/100};
 const stock=p=>(p.colors||[]).reduce((s,c)=>s+Object.values(c.sizes||{}).reduce((a,v)=>a+n(v),0),0);
@@ -32,6 +60,41 @@ function tickets(order){const list=read(F.tickets,[]),set=read(F.settings,DEF);l
 
 app.use(cors()); app.use(express.json({limit:"100mb"})); app.use("/uploads",express.static(UP));
 app.get("/api/health",(q,r)=>r.json({ok:true,server:"SHELIVA PRO",time:now()}));
+
+app.post("/api/admin/login",(q,r)=>{
+  const configured=String(process.env.ADMIN_SECRET||"");
+  const supplied=String(q.body?.secret||"");
+
+  if(!configured){
+    return r.status(503).json({error:"ADMIN_SECRET sunucuda ayarlı değil."});
+  }
+
+  const a=Buffer.from(configured);
+  const b=Buffer.from(supplied);
+  const valid=a.length===b.length && crypto.timingSafeEqual(a,b);
+
+  if(!valid){
+    return r.status(401).json({error:"Yönetici anahtarı yanlış."});
+  }
+
+  const t=token();
+  adminSessions.set(t,{
+    createdAt:Date.now(),
+    expiresAt:Date.now()+ADMIN_SESSION_MS
+  });
+
+  r.json({
+    ok:true,
+    token:t,
+    expiresIn:ADMIN_SESSION_MS
+  });
+});
+
+app.post("/api/admin/logout",needAdmin,(q,r)=>{
+  adminSessions.delete(adminTokenFrom(q));
+  r.json({ok:true});
+});
+
 app.post("/api/auth/request-otp",(q,r)=>{const p=phone(q.body.phone);if(p.length<10)return r.status(400).json({error:"Geçerli telefon gir."});let list=read(F.otp,[]).filter(x=>new Date(x.expiresAt).getTime()>Date.now());if(list.filter(x=>x.phone===p&&Date.now()-new Date(x.createdAt).getTime()<60000).length>=3)return r.status(429).json({error:"Çok fazla kod istedin. 1 dakika bekle."});const code=String(Math.floor(100000+Math.random()*900000));list.push({phone:p,code,createdAt:now(),expiresAt:new Date(Date.now()+300000).toISOString()});write(F.otp,list);console.log(`\n===== SHELIVA TEST OTP =====\nTELEFON: ${p}\nKOD: ${code}\n============================\n`);r.json({ok:true})});
 
 app.post("/api/auth/register-simple",(q,r)=>{
@@ -49,6 +112,26 @@ app.post("/api/auth/register-simple",(q,r)=>{
 app.post("/api/auth/register",(q,r)=>{const p=phone(q.body.phone),email=String(q.body.email||"").trim().toLowerCase(),name=String(q.body.name||"").trim(),pw=String(q.body.password||""),code=String(q.body.code||"").trim();if(!name||p.length<10||!email||pw.length<6)return r.status(400).json({error:"Bilgiler eksik veya şifre kısa."});const otps=read(F.otp,[]),idx=otps.findIndex(x=>x.phone===p&&x.code===code&&new Date(x.expiresAt).getTime()>Date.now());if(idx<0)return r.status(400).json({error:"Kod yanlış veya süresi doldu."});const users=read(F.users,[]);if(users.some(u=>u.phone===p||u.email===email))return r.status(409).json({error:"Telefon veya e-posta kayıtlı."});const u={id:nextId(users),name,phone:p,email,passwordHash:hash(pw),verified:true,addresses:[],createdAt:now()};users.push(u);write(F.users,users);otps.splice(idx,1);write(F.otp,otps);const ss=read(F.sessions,[]),t=token();ss.push({token:t,userId:u.id,createdAt:now(),expiresAt:new Date(Date.now()+30*86400000).toISOString()});write(F.sessions,ss);r.status(201).json({token:t,user:safe(u)})});
 app.post("/api/auth/login",(q,r)=>{const l=String(q.body.login||"").trim().toLowerCase(),p=phone(l),u=read(F.users,[]).find(x=>x.email===l||x.phone===p);if(!u||!verify(String(q.body.password||""),u.passwordHash))return r.status(401).json({error:"Giriş bilgileri yanlış."});const ss=read(F.sessions,[]),t=token();ss.push({token:t,userId:u.id,createdAt:now(),expiresAt:new Date(Date.now()+30*86400000).toISOString()});write(F.sessions,ss);r.json({token:t,user:safe(u)})});
 app.get("/api/auth/me",need,(q,r)=>r.json(safe(q.user)));app.post("/api/auth/logout",need,(q,r)=>{const t=String(q.headers.authorization||"").replace(/^Bearer\s+/i,"");write(F.sessions,read(F.sessions,[]).filter(s=>s.token!==t));r.json({ok:true})});app.get("/api/account/orders",need,(q,r)=>r.json(read(F.orders,[]).filter(o=>n(o.userId)===n(q.user.id)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));
+
+/*
+  Bu noktadan sonraki API'lerde sadece asagidaki musteri rotalari acik.
+  Diger urun/siparis/stok/ayar/rapor islemleri admin token ister.
+*/
+app.use((req,res,next)=>{
+  const method=req.method.toUpperCase();
+  const p=req.path;
+
+  const customerRoute=
+    (method==="GET" && p==="/api/products") ||
+    (method==="GET" && /^\/api\/products\/\d+\/reviews$/.test(p)) ||
+    (method==="POST" && p==="/api/orders") ||
+    (method==="POST" && p==="/api/reviews") ||
+    (method==="POST" && p==="/api/returns") ||
+    (method==="GET" && p==="/api/settings");
+
+  if(customerRoute) return next();
+  return needAdmin(req,res,next);
+});
 
 app.get("/api/products",(q,r)=>r.json(read(F.products,[]).map(enrich)));
 app.post("/api/products",(q,r)=>{const list=read(F.products,[]),id=nextId(list),colors=Array.isArray(q.body.colors)?q.body.colors.map((c,i)=>color(c,id,i)):[];const p={id,code:q.body.code||`SHL-${String(id).padStart(4,"0")}`,name:q.body.name||"Yeni Ürün",category:q.body.category||"Yazlık",description:q.body.description||"",quality:q.body.quality||"",sole:q.body.sole||"",price:n(q.body.price),discount:n(q.body.discount),purchasePrice:n(q.body.purchasePrice),vatRate:n(q.body.vatRate),shippingCost:n(q.body.shippingCost),packagingCost:n(q.body.packagingCost),otherCost:n(q.body.otherCost),active:q.body.active!==false,newest:q.body.newest!==false,featured:q.body.featured===true,features:q.body.features||"",measurements:q.body.measurements||"",paymentInfo:q.body.paymentInfo||"",shippingReturns:q.body.shippingReturns||"",faq:q.body.faq||"",colors,image:colors?.[0]?.images?.[0]||"",totalSold:n(q.body.totalSold),createdAt:now()};list.push(p);write(F.products,list);r.status(201).json(enrich(p))});

@@ -3,6 +3,7 @@ import { jsPDF } from "jspdf";
 import "./App.css";
 
 const API = "https://sheliva-server.onrender.com";
+const ADMIN_TOKEN_KEY = "sheliva-admin-session-v1";
 const SIZES = ["36","37","38","39","40","41"];
 
 const n = v => Number(v || 0);
@@ -99,6 +100,66 @@ function calculate(product) {
 }
 
 export default function App() {
+  // SHELIVA_ADMIN_LOGIN_V1
+  const [adminToken,setAdminToken]=useState(
+    ()=>sessionStorage.getItem(ADMIN_TOKEN_KEY)||""
+  );
+  const [adminSecret,setAdminSecret]=useState("");
+  const [adminLoginError,setAdminLoginError]=useState("");
+  const [adminLoginLoading,setAdminLoginLoading]=useState(false);
+
+  async function adminFetch(url,options={}){
+    const headers={
+      ...(options.headers||{}),
+      ...(adminToken ? {Authorization:`Bearer ${adminToken}`} : {})
+    };
+
+    const res=await window.fetch(url,{...options,headers});
+
+    if(res.status===401 && adminToken){
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      setAdminToken("");
+    }
+
+    return res;
+  }
+
+  async function loginAdmin(event){
+    event.preventDefault();
+    setAdminLoginLoading(true);
+    setAdminLoginError("");
+
+    try{
+      const res=await window.fetch(`${API}/api/admin/login`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({secret:adminSecret})
+      });
+
+      const data=await res.json();
+
+      if(!res.ok){
+        throw new Error(data.error||"Giriş başarısız.");
+      }
+
+      sessionStorage.setItem(ADMIN_TOKEN_KEY,data.token);
+      setAdminToken(data.token);
+      setAdminSecret("");
+    }catch(error){
+      setAdminLoginError(error.message||"Giriş başarısız.");
+    }finally{
+      setAdminLoginLoading(false);
+    }
+  }
+
+  async function logoutAdmin(){
+    try{
+      await adminFetch(`${API}/api/admin/logout`,{method:"POST"});
+    }catch{}
+
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    setAdminToken("");
+  }
   const [tickets,setTickets] = useState([]);
   const [returns,setReturns] = useState([]);
   const [settings,setSettings] = useState({});
@@ -145,9 +206,9 @@ export default function App() {
     try {
       const [p,o,r] =
         await Promise.all([
-          fetch(`${API}/api/products`),
-          fetch(`${API}/api/orders`),
-          fetch(`${API}/api/reviews`)
+          adminFetch(`${API}/api/products`),
+          adminFetch(`${API}/api/orders`),
+          adminFetch(`${API}/api/reviews`)
         ]);
 
       if (!p.ok || !o.ok || !r.ok) {
@@ -159,7 +220,7 @@ export default function App() {
       setReviews(await r.json());
 
       try {
-        const [tt,rr,ss,mm]=await Promise.all([fetch(`${API}/api/tickets`),fetch(`${API}/api/returns`),fetch(`${API}/api/settings`),fetch(`${API}/api/metrics`)]);
+        const [tt,rr,ss,mm]=await Promise.all([adminFetch(`${API}/api/tickets`),adminFetch(`${API}/api/returns`),adminFetch(`${API}/api/settings`),adminFetch(`${API}/api/metrics`)]);
         if(tt.ok)setTickets(await tt.json()); if(rr.ok)setReturns(await rr.json()); if(ss.ok){const incoming=await ss.json(); if(!settingsDirtyRef.current)setSettings(incoming);} if(mm.ok)setMetrics(await mm.json());
       } catch {}
       setConnected(true);
@@ -169,6 +230,8 @@ export default function App() {
   }
 
   useEffect(()=>{
+    if(!adminToken) return;
+
     refresh();
 
     const timer =
@@ -176,7 +239,7 @@ export default function App() {
 
     return () =>
       clearInterval(timer);
-  },[]);
+  },[adminToken]);
 
   const activeOrders =
     orders.filter(
@@ -301,7 +364,7 @@ export default function App() {
         : `${API}/api/products`;
 
     const res =
-      await fetch(url,{
+      await adminFetch(url,{
         method:
           exists
             ? "PUT"
@@ -340,7 +403,7 @@ export default function App() {
       return;
     }
 
-    await fetch(
+    await adminFetch(
       `${API}/api/products/${product.id}`,
       {method:"DELETE"}
     );
@@ -362,7 +425,7 @@ export default function App() {
 
       if(!paymentApproved) return;
 
-      const paymentRes = await fetch(
+      const paymentRes = await adminFetch(
         `${API}/api/orders/${order.id}/approve-payment`,
         {method:"POST"}
       );
@@ -390,7 +453,7 @@ export default function App() {
     }
 
     const res =
-      await fetch(
+      await adminFetch(
         `${API}/api/orders/${order.id}/status`,
         {
           method:"PUT",
@@ -420,7 +483,7 @@ export default function App() {
   async function revertOrder(order) {
     if(!window.confirm(`${order.orderNo} bir önceki duruma geri alınacak. Onaylıyor musun?`)) return;
 
-    const res = await fetch(`${API}/api/orders/${order.id}/revert`,{method:"POST"});
+    const res = await adminFetch(`${API}/api/orders/${order.id}/revert`,{method:"POST"});
     const data = await res.json();
 
     if(!res.ok){
@@ -432,7 +495,7 @@ export default function App() {
   }
 
   async function setReviewStatus(review,status) {
-    const res = await fetch(`${API}/api/reviews/${review.id}`,{
+    const res = await adminFetch(`${API}/api/reviews/${review.id}`,{
       method:"PUT",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({status})
@@ -443,14 +506,14 @@ export default function App() {
 
   async function deleteReview(review) {
     if(!window.confirm("Bu yorum kalıcı olarak silinsin mi?")) return;
-    const res=await fetch(`${API}/api/reviews/${review.id}`,{method:"DELETE"});
+    const res=await adminFetch(`${API}/api/reviews/${review.id}`,{method:"DELETE"});
     if(!res.ok) return alert("Yorum silinemedi.");
     setReviews(current=>current.filter(item=>item.id!==review.id));
     await refresh();
   }
 
   async function setReturnStatus(item,status) {
-    const res = await fetch(`${API}/api/returns/${item.id}`,{
+    const res = await adminFetch(`${API}/api/returns/${item.id}`,{
       method:"PUT",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({status})
@@ -460,7 +523,7 @@ export default function App() {
   }
 
   async function saveSettings() {
-    const res = await fetch(`${API}/api/settings`,{
+    const res = await adminFetch(`${API}/api/settings`,{
       method:"PUT",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(settings)
@@ -469,6 +532,106 @@ export default function App() {
     settingsDirtyRef.current=false;
     alert("Ayarlar kaydedildi.");
     await refresh();
+  }
+
+  if(!adminToken){
+    return (
+      <div style={{
+        minHeight:"100vh",
+        display:"grid",
+        placeItems:"center",
+        background:"linear-gradient(135deg,#0b0b0d,#17171c)",
+        padding:20,
+        fontFamily:"Inter,system-ui,sans-serif"
+      }}>
+        <form
+          onSubmit={loginAdmin}
+          style={{
+            width:"min(430px,100%)",
+            background:"#ffffff",
+            borderRadius:24,
+            padding:30,
+            boxShadow:"0 30px 100px rgba(0,0,0,.45)"
+          }}
+        >
+          <div style={{
+            letterSpacing:4,
+            fontSize:12,
+            color:"#777",
+            marginBottom:8
+          }}>
+            SHELİVA
+          </div>
+
+          <h1 style={{margin:"0 0 8px",fontFamily:"Georgia,serif"}}>
+            Yönetim Paneli
+          </h1>
+
+          <p style={{margin:"0 0 22px",color:"#666",lineHeight:1.5}}>
+            Devam etmek için yalnızca yönetici anahtarını gir.
+          </p>
+
+          <input
+            type="password"
+            value={adminSecret}
+            onChange={e=>setAdminSecret(e.target.value)}
+            placeholder="Yönetici anahtarı"
+            autoFocus
+            autoComplete="current-password"
+            style={{
+              width:"100%",
+              boxSizing:"border-box",
+              padding:"15px 16px",
+              border:"1px solid #d8d8d8",
+              borderRadius:12,
+              fontSize:16,
+              outline:"none"
+            }}
+          />
+
+          {adminLoginError && (
+            <div style={{
+              marginTop:12,
+              padding:"10px 12px",
+              borderRadius:10,
+              background:"#fff0f0",
+              color:"#a40000",
+              fontSize:14
+            }}>
+              {adminLoginError}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={adminLoginLoading||!adminSecret}
+            style={{
+              width:"100%",
+              marginTop:16,
+              padding:"14px 16px",
+              border:0,
+              borderRadius:12,
+              background:"#111",
+              color:"#fff",
+              fontWeight:800,
+              cursor:"pointer",
+              opacity:adminLoginLoading||!adminSecret?.7:1
+            }}
+          >
+            {adminLoginLoading ? "Kontrol ediliyor..." : "PANELE GİR"}
+          </button>
+
+          <small style={{
+            display:"block",
+            textAlign:"center",
+            color:"#888",
+            marginTop:16
+          }}>
+            Oturum tarayıcı sekmesi kapanana kadar hatırlanır.
+          </small>
+        </form>
+      </div>
+    );
   }
 
   return (
@@ -601,6 +764,22 @@ export default function App() {
               ? "SERVER BAĞLI"
               : "SERVER BAĞLANTISI YOK"}
           </div>
+
+          <button
+            type="button"
+            onClick={logoutAdmin}
+            style={{
+              marginLeft:12,
+              border:"1px solid #ddd",
+              background:"#fff",
+              borderRadius:10,
+              padding:"9px 12px",
+              cursor:"pointer",
+              fontWeight:700
+            }}
+          >
+            Çıkış
+          </button>
 
         </header>
 
