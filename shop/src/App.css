@@ -2245,3 +2245,29 @@ a {
     height:28px;
   }
 }
+/* SHELIVA_AUTH_PRO_V1 */
+.authInlineError{
+  border:1px solid rgba(220,75,75,.45);
+  background:rgba(130,25,25,.16);
+  color:#ffb2b2;
+  padding:12px 14px;
+  font-size:13px;
+  line-height:1.5;
+  border-radius:3px;
+}
+
+.authForm input:-webkit-autofill,
+.authForm input:-webkit-autofill:hover,
+.authForm input:-webkit-autofill:focus{
+  -webkit-text-fill-color:#111;
+  box-shadow:0 0 0 1000px #edf3ff inset;
+  transition:background-color 9999s ease-in-out 0s;
+}
+
+.authForm input{
+  min-height:54px;
+}
+
+.authForm label{
+  gap:8px;
+}

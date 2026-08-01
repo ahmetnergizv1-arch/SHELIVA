@@ -78,6 +78,9 @@ export default function App() {
   const [loginDraft,setLoginDraft]=useState(null);
   const [loginCode,setLoginCode]=useState("");
   const [rememberMe,setRememberMe]=useState(true);
+  const [authError,setAuthError]=useState("");
+  const [registerResendAt,setRegisterResendAt]=useState(0);
+  const [loginResendAt,setLoginResendAt]=useState(0);
 
   const [toast,setToast]=useState(null);
   const [accountOpen,setAccountOpen]=useState(false);
@@ -880,6 +883,7 @@ export default function App() {
     if(authBusy) return;
 
     const form=new FormData(event.currentTarget);
+    setAuthError("");
 
     if(!loginCodeSent){
       const draft={
@@ -896,10 +900,11 @@ export default function App() {
         });
 
         const data=await res.json();
-        if(!res.ok) return showToast(data.error||"Giriş kodu gönderilemedi.","","error");
+        if(!res.ok){const msg=data.error||"Giriş kodu gönderilemedi.";setAuthError(msg);return showToast(msg,"","error");}
 
         setLoginDraft(draft);
         setLoginCodeSent(true);
+        setLoginResendAt(Date.now()+60000);
         showToast("Giriş kodu gönderildi","E-posta adresinize gelen 6 haneli kodu girin.");
       }catch{
         showToast("Bağlantı hatası","Tekrar deneyin.","error");
@@ -948,12 +953,28 @@ export default function App() {
     if(authBusy) return;
 
     const form=new FormData(event.currentTarget);
+    setAuthError("");
 
     if(!registerCodeSent){
+      const password=String(form.get("password")||"");
+      const passwordConfirm=String(form.get("passwordConfirm")||"");
+
+      if(password.length<6){
+        const msg="Şifre en az 6 karakter olmalıdır.";
+        setAuthError(msg);
+        return showToast(msg,"","error");
+      }
+
+      if(password!==passwordConfirm){
+        const msg="Şifreler birbiriyle eşleşmiyor.";
+        setAuthError(msg);
+        return showToast(msg,"","error");
+      }
+
       const draft={
         name:String(form.get("name")||"").trim(),
         email:String(form.get("email")||"").trim().toLowerCase(),
-        password:String(form.get("password")||"")
+        password
       };
 
       setAuthBusy(true);
@@ -982,10 +1003,11 @@ export default function App() {
 
         const data=await res.json();
 
-        if(!res.ok) return showToast(data.error||"Kod gönderilemedi.");
+        if(!res.ok){const msg=data.error||"Kod gönderilemedi.";setAuthError(msg);return showToast(msg,"","error");}
 
         setRegisterDraft(draft);
         setRegisterCodeSent(true);
+        setRegisterResendAt(Date.now()+60000);
         showToast("6 haneli doğrulama kodu e-posta adresinize gönderildi.");
       }finally{
         setAuthBusy(false);
@@ -1008,7 +1030,7 @@ export default function App() {
 
       const data=await res.json();
 
-      if(!res.ok) return showToast(data.error||"Hesap oluşturulamadı.");
+      if(!res.ok){const msg=data.error||"Hesap oluşturulamadı.";setAuthError(msg);return showToast(msg,"","error");}
 
       localStorage.setItem("sheliva-token",data.token);
       setAuthToken(data.token);
@@ -1781,7 +1803,7 @@ export default function App() {
           <div className="authModal">
             <div className="authHead">
               <div><small>SHELİVA</small><h2>{authMode==="login" ? "Giriş Yap" : authMode==="forgot" ? "Şifremi Unuttum" : "Üye Ol"}</h2></div>
-              <button onClick={()=>setAuthOpen(false)}>×</button>
+              <button onClick={()=>{setAuthOpen(false);setAuthError("");}}>×</button>
             </div>
 
             <div className="authTabs">
@@ -1792,8 +1814,10 @@ export default function App() {
             {authMode==="login" ? (
               !loginCodeSent ? (
                 <form className="authForm" onSubmit={loginUser}>
-                  <label>E-posta<input name="login" type="email" required placeholder="mail@ornek.com"/></label>
-                  <label>Şifre<input name="password" type="password" required placeholder="Şifren"/></label>
+                  <label>E-posta<input name="login" type="email" autoComplete="email" inputMode="email" required placeholder="mail@ornek.com"/></label>
+                  <label>Şifre<input name="password" type="password" autoComplete="current-password" required placeholder="Şifren"/></label>
+
+                  {authError && <div className="authInlineError">{authError}</div>}
 
                   <label className="rememberOption">
                     <input
@@ -1822,8 +1846,10 @@ export default function App() {
               ) : (
                 <form className="authForm" onSubmit={loginUser}>
                   <div className="verifyLater">
-                    <b>{loginDraft?.email}</b> adresine gönderilen 6 haneli giriş kodunu girin.
+                    <b>{loginDraft?.email}</b> adresine gönderilen 6 haneli güvenli giriş kodunu girin.
+                    Kod 5 dakika geçerlidir.
                   </div>
+                  {authError && <div className="authInlineError">{authError}</div>}
                   <label>Giriş Kodu
                     <input
                       value={loginCode}
@@ -1871,17 +1897,63 @@ export default function App() {
             ) : (
               !registerCodeSent ? (
                 <form className="authForm" onSubmit={registerUser}>
-                  <label>Ad Soyad<input name="name" required placeholder="Ad Soyad" defaultValue={savedAddress?.name || authUser?.name || ""}/></label>
-                  <label>E-posta<input name="email" type="email" required placeholder="mail@ornek.com"/></label>
-                  <label>Şifre<input name="password" type="password" required minLength="6" placeholder="En az 6 karakter"/></label>
-                  <div className="verifyLater">Hesabınız açılmadan önce e-posta adresinize 6 haneli doğrulama kodu gönderilir.</div>
+                  <label>Ad Soyad
+                    <input
+                      name="name"
+                      autoComplete="name"
+                      required
+                      placeholder="Ad Soyad"
+                      defaultValue={savedAddress?.name || authUser?.name || ""}
+                    />
+                  </label>
+
+                  <label>E-posta
+                    <input
+                      name="email"
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      required
+                      placeholder="mail@ornek.com"
+                    />
+                  </label>
+
+                  <label>Şifre
+                    <input
+                      name="password"
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      minLength="6"
+                      placeholder="En az 6 karakter"
+                    />
+                  </label>
+
+                  <label>Şifreyi Doğrula
+                    <input
+                      name="passwordConfirm"
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      minLength="6"
+                      placeholder="Şifreyi tekrar yazın"
+                    />
+                  </label>
+
+                  {authError && <div className="authInlineError">{authError}</div>}
+
+                  <div className="verifyLater">
+                    Aynı e-posta adresiyle ikinci hesap açılamaz. E-posta adresinize 6 haneli doğrulama kodu gönderilir.
+                  </div>
                   <button disabled={authBusy}>{authBusy ? "KOD GÖNDERİLİYOR..." : "DOĞRULAMA KODU GÖNDER"}</button>
                 </form>
               ) : (
                 <form className="authForm" onSubmit={registerUser}>
                   <div className="verifyLater">
-                    <b>{registerDraft?.email}</b> adresine gönderilen 6 haneli kodu girin. Kod 5 dakika geçerlidir.
+                    <b>{registerDraft?.email}</b> adresine gönderilen 6 haneli kodu girin.
+                    Kod 5 dakika geçerlidir ve yalnızca bir kez kullanılabilir.
                   </div>
+                  {authError && <div className="authInlineError">{authError}</div>}
                   <label>Doğrulama Kodu
                     <input
                       value={registerCode}

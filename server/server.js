@@ -391,7 +391,7 @@ app.post("/api/auth/register-email",async(q,r)=>{
   const users=read(F.users,[]);
 
   if(users.some(u=>(p&&u.phone===p)||u.email===email)){
-    return r.status(409).json({error:"Telefon veya e-posta zaten kayıtlı."});
+    return r.status(409).json({error:"Bu e-posta adresi zaten başka bir hesapta kullanılıyor."});
   }
 
   const u={
@@ -470,7 +470,7 @@ app.post("/api/auth/register-simple",(q,r)=>{
   const p=phone(q.body.phone),email=String(q.body.email||"").trim().toLowerCase(),name=String(q.body.name||"").trim(),pw=String(q.body.password||"");
   if(!name||p.length<10||!email||pw.length<6)return r.status(400).json({error:"Bilgileri kontrol et. Şifre en az 6 karakter olmalı."});
   const users=read(F.users,[]);
-  if(users.some(u=>u.phone===p||u.email===email))return r.status(409).json({error:"Telefon veya e-posta zaten kayıtlı."});
+  if(users.some(u=>u.phone===p||u.email===email))return r.status(409).json({error:"Bu e-posta adresi zaten başka bir hesapta kullanılıyor."});
   const u={id:nextId(users),name,phone:p,email,passwordHash:hash(pw),verified:false,addresses:[],createdAt:now()};
   users.push(u);write(F.users,users);
   const ss=read(F.sessions,[]),t=token();
@@ -484,9 +484,8 @@ app.post("/api/auth/login/request-code",async(q,r)=>{
   const password=String(q.body.password||"");
   const user=read(F.users,[]).find(u=>u.email===email);
 
-  if(!user||!verify(password,user.passwordHash)){
-    return r.status(401).json({error:"E-posta veya şifre yanlış."});
-  }
+  if(!user){return r.status(404).json({error:"Bu e-posta adresiyle kayıtlı hesap bulunamadı."});}
+  if(!verify(password,user.passwordHash)){return r.status(401).json({error:"Şifre yanlış. Şifrenizi unuttuysanız sıfırlayabilirsiniz."});}
 
   const code=createEmailCode(email,"login");
   const result=await sendMail({
@@ -511,9 +510,8 @@ app.post("/api/auth/login-email",(q,r)=>{
   const remember=q.body.remember!==false;
   const user=read(F.users,[]).find(u=>u.email===email);
 
-  if(!user||!verify(password,user.passwordHash)){
-    return r.status(401).json({error:"E-posta veya şifre yanlış."});
-  }
+  if(!user){return r.status(404).json({error:"Bu e-posta adresiyle kayıtlı hesap bulunamadı."});}
+  if(!verify(password,user.passwordHash)){return r.status(401).json({error:"Şifre yanlış. Şifrenizi unuttuysanız sıfırlayabilirsiniz."});}
 
   if(!consumeEmailCode(email,"login",code)){
     return r.status(400).json({error:"Giriş kodu yanlış veya süresi doldu."});
