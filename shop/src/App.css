@@ -3047,11 +3047,36 @@ a {
 }
 /* SHELIVA_MOBILE_PRODUCT_GALLERY_V5_END */
 
-/* SHELIVA_PC_ACCOUNT_SHIFT_100PX_START */
-/* Eski menu korunur; yalnizca PC'de 100px sola kayar. */
+/* SHELIVA_PC_ACCOUNT_MIN_GROW_V6_START */
+/* Sadece PC: eski sağ konum korunur, panel çok az büyür. */
 @media (min-width: 761px) {
   .accountPanel {
-    transform: translateX(-100px) !important;
+    transform: none !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    width: min(640px, calc(100vw - 32px)) !important;
+    max-width: min(640px, calc(100vw - 32px)) !important;
+    overflow-x: hidden !important;
+  }
+
+  .accountPanel,
+  .accountPanel * {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+  }
+
+  .accountPanel > *,
+  .accountPanel section,
+  .accountPanel article,
+  .accountPanel div {
+    max-width: 100% !important;
+  }
+
+  .accountPanel::-webkit-scrollbar:horizontal,
+  .accountPanel *::-webkit-scrollbar:horizontal {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
-/* SHELIVA_PC_ACCOUNT_SHIFT_100PX_END */
+/* SHELIVA_PC_ACCOUNT_MIN_GROW_V6_END */
