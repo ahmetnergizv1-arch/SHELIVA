@@ -2276,3 +2276,161 @@ a {
 .shelivaLightbox{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);display:grid;place-items:center;padding:30px}
 .shelivaLightbox img{max-width:min(1000px,94vw);max-height:90vh;object-fit:contain;border-radius:14px;box-shadow:0 30px 100px rgba(0,0,0,.6)}
 .shelivaLightbox button{position:fixed;right:26px;top:20px;width:46px;height:46px;border:1px solid #555;border-radius:50%;background:#111;color:#fff;font-size:30px}
+
+/* SHELIVA_MOBILE_FULL_WIDTH_V1_START */
+@media (max-width: 760px) {
+  html,
+  body,
+  #root,
+  .site {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .homeMain {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .heroBanner,
+  .heroTop,
+  .heroBottom {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 500px !important;
+    margin: 0 !important;
+    grid-template-columns: 62% 38% !important;
+  }
+
+  .heroBottom {
+    grid-template-columns: 38% 62% !important;
+  }
+
+  .heroPhoto,
+  .heroBlack {
+    min-width: 0 !important;
+  }
+
+  .heroBlack {
+    padding: 14px 8px !important;
+    overflow: hidden;
+  }
+
+  .heroBlack h1 {
+    max-width: 100%;
+    white-space: normal !important;
+    font-size: clamp(20px,5vw,29px) !important;
+    line-height: 1.05;
+  }
+
+  .heroBlack span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+  }
+
+  .categoryGrid {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 10px 0 38px !important;
+    padding: 0 10px !important;
+    display: grid !important;
+    grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .categoryGrid button {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    aspect-ratio: 0.68 !important;
+  }
+
+  .categoryGrid strong {
+    top: 16px !important;
+    padding: 0 4px;
+    font-size: clamp(11px,3.2vw,17px) !important;
+    letter-spacing: clamp(1px,.8vw,3px) !important;
+    overflow-wrap: anywhere;
+  }
+
+  .categoryGrid span {
+    top: 45px !important;
+    font-size: 9px !important;
+  }
+
+  .products {
+    width: 100% !important;
+    padding: 36px 10px 70px !important;
+  }
+
+  .productsTitle {
+    width: 100%;
+    margin-bottom: 25px;
+  }
+
+  .productsGrid {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .productCard {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .productImg {
+    height: auto !important;
+    aspect-ratio: 0.69 !important;
+  }
+
+  .productCardText {
+    padding: 13px 11px !important;
+  }
+
+  .productCardText h3 {
+    font-size: 13px !important;
+    min-height: 44px;
+    overflow-wrap: anywhere;
+  }
+
+  .priceArea {
+    flex-wrap: wrap;
+    gap: 5px !important;
+  }
+
+  .priceArea strong {
+    font-size: 17px !important;
+  }
+
+  .priceArea del {
+    font-size: 11px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .categoryGrid {
+    padding: 0 6px !important;
+    gap: 5px !important;
+  }
+
+  .categoryGrid strong {
+    font-size: 10px !important;
+    letter-spacing: 1px !important;
+  }
+
+  .products {
+    padding-inline: 7px !important;
+  }
+
+  .productsGrid {
+    gap: 7px !important;
+  }
+}
+/* SHELIVA_MOBILE_FULL_WIDTH_V1_END */
