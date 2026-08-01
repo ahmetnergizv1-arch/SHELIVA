@@ -2,7 +2,7 @@
 import { jsPDF } from "jspdf";
 import "./App.css";
 
-const API = "http://localhost:3001";
+const API = "https://sheliva-server.onrender.com";
 const SIZES = ["36","37","38","39","40","41"];
 
 const n = v => Number(v || 0);
