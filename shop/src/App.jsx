@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const API = "https://sheliva-server.onrender.com";
@@ -85,6 +85,7 @@ export default function App() {
   const [toast,setToast]=useState(null);
   const [accountOpen,setAccountOpen]=useState(false);
   const [myOrders,setMyOrders]=useState([]);
+  const myOrdersRef=useRef([]);
   const [myOrdersLoading,setMyOrdersLoading]=useState(false);
   const [ordersExpanded,setOrdersExpanded]=useState(false);
   const [accountOrderFilter,setAccountOrderFilter]=useState("active");
@@ -308,9 +309,18 @@ export default function App() {
   },[]);
 
   useEffect(()=>{
+    myOrdersRef.current=myOrders;
+  },[myOrders]);
+
+  useEffect(()=>{
     if(!accountOpen||!authToken) return;
-    loadMyOrders();
-    const timer=setInterval(loadMyOrders,2500);
+
+    loadMyOrders({silent:myOrdersRef.current.length>0});
+
+    const timer=setInterval(()=>{
+      loadMyOrders({silent:true});
+    },5000);
+
     return ()=>clearInterval(timer);
   },[accountOpen,authToken]);
 
@@ -479,25 +489,64 @@ export default function App() {
       .filter(Boolean);
   },[products]);
 
-  async function loadMyOrders() {
+  function orderStateSignature(list){
+    return JSON.stringify(
+      (list||[]).map(order=>({
+        id:order.id,
+        status:order.status,
+        paymentStatus:order.paymentStatus,
+        cargoCompany:order.cargoCompany||"",
+        cargoTracking:order.cargoTracking||"",
+        updatedAt:order.updatedAt||order.statusUpdatedAt||"",
+        cancelledAt:order.cancelledAt||"",
+        deliveredAt:order.deliveredAt||""
+      }))
+    );
+  }
+
+  async function loadMyOrders({silent=false}={}) {
     if(!authToken){
-      setAuthMode("login");
-      setAuthOpen(true);
+      if(!silent){
+        setAuthMode("login");
+        setAuthOpen(true);
+      }
       return;
     }
 
-    if(!(myOrders||[]).length) setMyOrdersLoading(true);
+    if(!silent && !myOrdersRef.current.length){
+      setMyOrdersLoading(true);
+    }
+
     try{
       const res=await fetch(`${API}/api/account/orders`,{
-        headers:{Authorization:`Bearer ${authToken}`}
+        headers:{Authorization:`Bearer ${authToken}`},
+        cache:"no-store"
       });
+
       if(!res.ok) throw new Error();
-      setMyOrders(await res.json());
+
+      const nextOrders=await res.json();
+      const previousSignature=orderStateSignature(myOrdersRef.current);
+      const nextSignature=orderStateSignature(nextOrders);
+
+      if(previousSignature!==nextSignature){
+        myOrdersRef.current=nextOrders;
+        setMyOrders(nextOrders);
+      }
+
+      setMyOrdersLoadedOnce(true);
     }catch{
-      setMyOrders([]);
-      showToast("Siparişler yüklenemedi","Tekrar giriş yapmayı dene.","error");
+      if(!silent){
+        showToast(
+          "Siparişler yüklenemedi",
+          "Bağlantıyı kontrol edip tekrar deneyin.",
+          "error"
+        );
+      }
     }finally{
-      setMyOrdersLoading(false);
+      if(!silent){
+        setMyOrdersLoading(false);
+      }
     }
   }
 
@@ -509,7 +558,7 @@ export default function App() {
     }
     setAccountOpen(true);
     setOrdersExpanded(true);
-    loadMyOrders();
+    loadMyOrders({silent:myOrdersRef.current.length>0});
   }
 
   function statusLabel(order){
@@ -2635,7 +2684,7 @@ if (loading) {
                     setCartOpen(false);
                     setAccountOpen(true);
                     setOrdersExpanded(true);
-                    loadMyOrders();
+                    loadMyOrders({silent:myOrdersRef.current.length>0});
                   }}
                 >
                   SİPARİŞLERİMDE GÖR
