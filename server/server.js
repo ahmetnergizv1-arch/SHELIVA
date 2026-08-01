@@ -217,7 +217,7 @@ async function sendOrderEmail(order,type){
     created:{
       subject:`${order.orderNo} numaralı sipariş talebiniz alındı`,
       title:"Sipariş talebiniz alındı",
-      text:`Sipariş talebiniz oluşturuldu. Ödeme için WhatsApp veya Instagram üzerinden iletişime geçebilirsiniz. Ödeme yönetici tarafından onaylanana kadar stok düşmez ve sipariş kesinleşmez.`
+      text:`Sipariş talebiniz oluşturuldu. Ödeme için WhatsApp veya Instagram üzerinden iletişime geçebilirsiniz. Siparişiniz oluşturulduğu anda ürünler sizin için ayrılır. Ödeme onaylanmaz veya sipariş iptal edilirse stok otomatik geri eklenir.`
     },
     paid:{
       subject:`${order.orderNo} ödeme onayı`,
@@ -265,6 +265,26 @@ const stock=p=>(p.colors||[]).reduce((s,c)=>s+Object.values(c.sizes||{}).reduce(
 function saveImage(data,prefix){if(!data||!String(data).startsWith("data:image/"))return null;const m=String(data).match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);if(!m)return null;let e=m[1].toLowerCase();if(e==="jpeg")e="jpg";const name=`${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${e}`;fs.writeFileSync(path.join(UP,name),Buffer.from(m[2],"base64"));return `/uploads/${name}`}
 function color(c,pid,i){const images=[];for(const x of c.images||[]){if(typeof x==="string"&&x)images.push(x);else if(x?.url)images.push(x.url);else if(x?.data){const s=saveImage(x.data,`p${pid}-c${i+1}`);if(s)images.push(s)}}if(!images.length&&c.image)images.push(c.image);const sizes={};for(const s of ["36","37","38","39","40","41"])sizes[s]=n(c.sizes?.[s]);return{id:c.id||`CLR-${Date.now()}-${i+1}`,name:c.name||`Renk ${i+1}`,images,image:images[0]||"",sizes}}
 const enrich=p=>({...p,stock:stock(p),salePrice:sale(p),totalCost:cost(p),grossProfit:Math.round((sale(p)-cost(p))*100)/100});
+
+function restoreOrderStock(order){
+  if(!order?.stockReserved || order?.stockRestored) return order;
+
+  const products=read(F.products,[]);
+  for(const item of order.items||[]){
+    const product=products.find(p=>n(p.id)===n(item.productId));
+    const color=product?.colors?.find(c=>c.id===item.colorId);
+    const size=String(item.size);
+    if(!color) continue;
+    color.sizes=color.sizes||{};
+    color.sizes[size]=n(color.sizes[size])+n(item.qty);
+  }
+
+  write(F.products,products);
+  order.stockRestored=true;
+  order.stockReserved=false;
+  order.stockRestoredAt=now();
+  return order;
+}
 const profit=o=>o.status!=="Teslim Edildi"?0:Math.round(((o.items||[]).reduce((s,i)=>s+(n(i.price)-n(i.unitCost))*n(i.qty),0)-n(o.actualCargoCost)-n(o.refundCost))*100)/100;
 function tickets(order){const list=read(F.tickets,[]),set=read(F.settings,DEF);let id=list.length?Math.max(...list.map(x=>n(x.id))):0;for(const item of order.items||[])for(let k=0;k<n(item.qty);k++){id++;list.push({id,ticketNo:`${set.ticketPrefix||"FIS"}-${String(id).padStart(6,"0")}`,orderId:order.id,orderNo:order.orderNo,createdAt:now(),printedAt:null,productId:item.productId,productCode:item.code||"",quality:item.quality||"",sole:item.sole||"",model:item.name,color:item.colorName,size:item.size,image:item.image||"",customer:order.customer,cargoCompany:"",cargoTracking:"",status:order.status})}write(F.tickets,list)}
 
@@ -459,6 +479,60 @@ app.post("/api/auth/register-simple",(q,r)=>{
   r.status(201).json({token:t,user:safe(u)});
 });
 app.post("/api/auth/register",(q,r)=>{const p=phone(q.body.phone),email=String(q.body.email||"").trim().toLowerCase(),name=String(q.body.name||"").trim(),pw=String(q.body.password||""),code=String(q.body.code||"").trim();if(!name||p.length<10||!email||pw.length<6)return r.status(400).json({error:"Bilgiler eksik veya şifre kısa."});const otps=read(F.otp,[]),idx=otps.findIndex(x=>x.phone===p&&x.code===code&&new Date(x.expiresAt).getTime()>Date.now());if(idx<0)return r.status(400).json({error:"Kod yanlış veya süresi doldu."});const users=read(F.users,[]);if(users.some(u=>u.phone===p||u.email===email))return r.status(409).json({error:"Telefon veya e-posta kayıtlı."});const u={id:nextId(users),name,phone:p,email,passwordHash:hash(pw),verified:true,addresses:[],createdAt:now()};users.push(u);write(F.users,users);otps.splice(idx,1);write(F.otp,otps);const ss=read(F.sessions,[]),t=token();ss.push({token:t,userId:u.id,createdAt:now(),expiresAt:new Date(Date.now()+30*86400000).toISOString()});write(F.sessions,ss);r.status(201).json({token:t,user:safe(u)})});
+app.post("/api/auth/login/request-code",async(q,r)=>{
+  const email=normalizeEmail(q.body.email);
+  const password=String(q.body.password||"");
+  const user=read(F.users,[]).find(u=>u.email===email);
+
+  if(!user||!verify(password,user.passwordHash)){
+    return r.status(401).json({error:"E-posta veya şifre yanlış."});
+  }
+
+  const code=createEmailCode(email,"login");
+  const result=await sendMail({
+    to:email,
+    subject:"SHELİVA güvenli giriş kodu",
+    title:"Hesabınıza giriş yapın",
+    body:"<p>SHELİVA hesabınıza giriş yapmak için aşağıdaki 6 haneli kodu kullanın.</p><p>Kod <b>5 dakika</b> geçerlidir.</p>",
+    code
+  });
+
+  if(!result.ok){
+    return r.status(500).json({error:"Giriş kodu gönderilemedi."});
+  }
+
+  r.json({ok:true});
+});
+
+app.post("/api/auth/login-email",(q,r)=>{
+  const email=normalizeEmail(q.body.email);
+  const password=String(q.body.password||"");
+  const code=String(q.body.code||"").trim();
+  const remember=q.body.remember!==false;
+  const user=read(F.users,[]).find(u=>u.email===email);
+
+  if(!user||!verify(password,user.passwordHash)){
+    return r.status(401).json({error:"E-posta veya şifre yanlış."});
+  }
+
+  if(!consumeEmailCode(email,"login",code)){
+    return r.status(400).json({error:"Giriş kodu yanlış veya süresi doldu."});
+  }
+
+  const sessions=read(F.sessions,[]);
+  const t=token();
+  const sessionMs=remember ? 30*86400000 : 12*60*60*1000;
+
+  sessions.push({
+    token:t,
+    userId:user.id,
+    createdAt:now(),
+    expiresAt:new Date(Date.now()+sessionMs).toISOString()
+  });
+
+  write(F.sessions,sessions);
+  r.json({token:t,user:safe(user)});
+});
 app.post("/api/auth/login",(q,r)=>{const l=String(q.body.login||"").trim().toLowerCase(),p=phone(l),u=read(F.users,[]).find(x=>x.email===l||x.phone===p);if(!u||!verify(String(q.body.password||""),u.passwordHash))return r.status(401).json({error:"Giriş bilgileri yanlış."});const ss=read(F.sessions,[]),t=token();ss.push({token:t,userId:u.id,createdAt:now(),expiresAt:new Date(Date.now()+30*86400000).toISOString()});write(F.sessions,ss);r.json({token:t,user:safe(u)})});
 app.get("/api/auth/me",need,(q,r)=>r.json(safe(q.user)));app.post("/api/auth/logout",need,(q,r)=>{const t=String(q.headers.authorization||"").replace(/^Bearer\s+/i,"");write(F.sessions,read(F.sessions,[]).filter(s=>s.token!==t));r.json({ok:true})});app.get("/api/account/orders",need,(q,r)=>r.json(read(F.orders,[]).filter(o=>n(o.userId)===n(q.user.id)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));
 
@@ -487,8 +561,16 @@ app.post("/api/products",(q,r)=>{const list=read(F.products,[]),id=nextId(list),
 app.put("/api/products/:id",(q,r)=>{const id=n(q.params.id),list=read(F.products,[]),idx=list.findIndex(p=>n(p.id)===id);if(idx<0)return r.status(404).json({error:"Ürün bulunamadı."});const old=list[idx],colors=Array.isArray(q.body.colors)?q.body.colors.map((c,i)=>color(c,id,i)):old.colors||[];list[idx]={...old,...q.body,id,colors,image:colors?.[0]?.images?.[0]||old.image||"",updatedAt:now()};write(F.products,list);r.json(enrich(list[idx]))});app.delete("/api/products/:id",(q,r)=>{write(F.products,read(F.products,[]).filter(p=>n(p.id)!==n(q.params.id)));r.json({ok:true})});
 
 app.get("/api/orders",(q,r)=>r.json([...read(F.orders,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));
-app.post("/api/orders",(q,r)=>{const user=auth(q);const orders=read(F.orders,[]),products=read(F.products,[]),set=read(F.settings,DEF),items=Array.isArray(q.body.items)?q.body.items:[];if(!items.length)return r.status(400).json({error:"Sepet boş."});const out=[];for(const i of items){const p=products.find(x=>n(x.id)===n(i.productId)),c=p?.colors?.find(x=>x.id===i.colorId),size=String(i.size),qty=Math.max(1,n(i.qty)),st=n(c?.sizes?.[size]);if(!p||!c)return r.status(400).json({error:"Ürün varyantı bulunamadı."});if(st<=0)return r.status(400).json({error:`${p.name} ${c.name} ${size} tükendi.`});if(qty>st)return r.status(400).json({error:`En fazla ${st} adet alınabilir.`});out.push({key:`${p.id}-${c.id}-${size}`,productId:p.id,code:p.code,quality:p.quality||"",sole:p.sole||"",name:p.name,colorId:c.id,colorName:c.name,size,qty,listPrice:n(p.price),discount:n(p.discount),price:sale(p),unitCost:cost(p),image:c.images?.[0]||c.image||p.image||""})}/* SIPARIS_ONAY_AKISI_V1: stok odeme onayinda dusulecek */const id=nextId(orders),subtotal=out.reduce((s,i)=>s+n(i.price)*n(i.qty),0),cargoFee=subtotal>=n(set.freeShippingThreshold)?0:n(set.cargoFee);const o={id,orderNo:`${set.orderPrefix||"SH"}-${String(id).padStart(6,"0")}`,userId:user?.id||null,source:"SHELIVA Web",customer:{name:q.body.customer?.name||user?.name||"",phone:q.body.customer?.phone||user?.phone||"",email:q.body.customer?.email||user?.email||"",city:q.body.customer?.city||"",district:q.body.customer?.district||"",neighborhood:q.body.customer?.neighborhood||"",postalCode:q.body.customer?.postalCode||"",address:q.body.customer?.address||"",note:q.body.customer?.note||""},items:out,subtotal,cargoFee,total:subtotal+cargoFee,paymentMethod:q.body.paymentMethod||"Havale / EFT",paymentStatus:"Onay Bekliyor",status:"Yeni",statusHistory:[{status:"Yeni",at:now()}],createdAt:now(),cargoCompany:"",cargoTracking:"",cargoNote:"",actualCargoCost:0,refundCost:0};orders.push(o);write(F.orders,orders);sendOrderEmail(o,"created").catch(()=>{});r.status(201).json(o)});
-app.put("/api/orders/:id/status",(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const s=String(q.body.status||"");if(!["Yeni","Hazırlanıyor","Kargoya Verildi","Teslim Edildi","İptal"].includes(s))return r.status(400).json({error:"Geçersiz durum."});if(["Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].includes(s)&&list[idx].paymentStatus!=="Ödendi")return r.status(400).json({error:"Ödeme onaylanmadan sipariş ilerletilemez."});list[idx].status=s;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:s,at:now()}];if(s==="Kargoya Verildi"){list[idx].cargoCompany=q.body.cargoCompany||list[idx].cargoCompany||"";list[idx].cargoTracking=q.body.cargoTracking||list[idx].cargoTracking||"";list[idx].cargoNote=q.body.cargoNote||list[idx].cargoNote||"";list[idx].actualCargoCost=n(q.body.actualCargoCost??list[idx].actualCargoCost)}write(F.orders,list);write(F.tickets,read(F.tickets,[]).map(t=>n(t.orderId)===n(list[idx].id)?{...t,status:s,cargoCompany:list[idx].cargoCompany,cargoTracking:list[idx].cargoTracking}:t));const mailType={"Hazırlanıyor":"preparing","Kargoya Verildi":"shipped","Teslim Edildi":"delivered","İptal":"cancelled"}[s];if(mailType)sendOrderEmail(list[idx],mailType).catch(()=>{});r.json(list[idx])});
+app.post("/api/orders",(q,r)=>{const user=auth(q);const orders=read(F.orders,[]),products=read(F.products,[]),set=read(F.settings,DEF),items=Array.isArray(q.body.items)?q.body.items:[];if(!items.length)return r.status(400).json({error:"Sepet boş."});const out=[];for(const i of items){const p=products.find(x=>n(x.id)===n(i.productId)),c=p?.colors?.find(x=>x.id===i.colorId),size=String(i.size),qty=Math.max(1,n(i.qty)),st=n(c?.sizes?.[size]);if(!p||!c)return r.status(400).json({error:"Ürün varyantı bulunamadı."});if(st<=0)return r.status(400).json({error:`${p.name} ${c.name} ${size} tükendi.`});if(qty>st)return r.status(400).json({error:`En fazla ${st} adet alınabilir.`});out.push({key:`${p.id}-${c.id}-${size}`,productId:p.id,code:p.code,quality:p.quality||"",sole:p.sole||"",name:p.name,colorId:c.id,colorName:c.name,size,qty,listPrice:n(p.price),discount:n(p.discount),price:sale(p),unitCost:cost(p),image:c.images?.[0]||c.image||p.image||""})}/* SIPARIS_STOK_REZERVASYONU_V2 */
+for(const item of out){
+  const product=products.find(p=>n(p.id)===n(item.productId));
+  const color=product?.colors?.find(c=>c.id===item.colorId);
+  const size=String(item.size);
+  if(!color) continue;
+  color.sizes[size]=Math.max(0,n(color.sizes[size])-n(item.qty));
+}
+write(F.products,products);const id=nextId(orders),subtotal=out.reduce((s,i)=>s+n(i.price)*n(i.qty),0),cargoFee=subtotal>=n(set.freeShippingThreshold)?0:n(set.cargoFee);const o={id,orderNo:`${set.orderPrefix||"SH"}-${String(id).padStart(6,"0")}`,userId:user?.id||null,source:"SHELIVA Web",customer:{name:q.body.customer?.name||user?.name||"",phone:q.body.customer?.phone||user?.phone||"",email:q.body.customer?.email||user?.email||"",city:q.body.customer?.city||"",district:q.body.customer?.district||"",neighborhood:q.body.customer?.neighborhood||"",postalCode:q.body.customer?.postalCode||"",address:q.body.customer?.address||"",note:q.body.customer?.note||""},items:out,subtotal,cargoFee,total:subtotal+cargoFee,paymentMethod:q.body.paymentMethod||"Havale / EFT",paymentStatus:"Onay Bekliyor",status:"Yeni",statusHistory:[{status:"Yeni",at:now()}],createdAt:now(),cargoCompany:"",cargoTracking:"",cargoNote:"",actualCargoCost:0,refundCost:0};o.stockReserved=true;o.stockRestored=false;o.stockReservedAt=now();orders.push(o);write(F.orders,orders);sendOrderEmail(o,"created").catch(()=>{});r.status(201).json(o)});
+app.put("/api/orders/:id/status",(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const s=String(q.body.status||"");if(!["Yeni","Hazırlanıyor","Kargoya Verildi","Teslim Edildi","İptal"].includes(s))return r.status(400).json({error:"Geçersiz durum."});if(["Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].includes(s)&&list[idx].paymentStatus!=="Ödendi")return r.status(400).json({error:"Ödeme onaylanmadan sipariş ilerletilemez."});list[idx].status=s;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:s,at:now()}];if(s==="Kargoya Verildi"){list[idx].cargoCompany=q.body.cargoCompany||list[idx].cargoCompany||"";list[idx].cargoTracking=q.body.cargoTracking||list[idx].cargoTracking||"";list[idx].cargoNote=q.body.cargoNote||list[idx].cargoNote||"";list[idx].actualCargoCost=n(q.body.actualCargoCost??list[idx].actualCargoCost)}write(F.orders,list);write(F.tickets,read(F.tickets,[]).map(t=>n(t.orderId)===n(list[idx].id)?{...t,status:s,cargoCompany:list[idx].cargoCompany,cargoTracking:list[idx].cargoTracking}:t));if(s==="İptal"){list[idx]=restoreOrderStock(list[idx]);write(F.orders,list);}const mailType={"Hazırlanıyor":"preparing","Kargoya Verildi":"shipped","Teslim Edildi":"delivered","İptal":"cancelled"}[s];if(mailType)sendOrderEmail(list[idx],mailType).catch(()=>{});r.json(list[idx])});
 app.post("/api/orders/:id/revert",(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const p={"Hazırlanıyor":"Yeni","Kargoya Verildi":"Hazırlanıyor","Teslim Edildi":"Kargoya Verildi"}[list[idx].status];if(!p)return r.status(400).json({error:"Bu durum geri alınamaz."});list[idx].status=p;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:p,at:now(),reverted:true}];write(F.orders,list);r.json(list[idx])});
 
 app.get("/api/tickets",(q,r)=>r.json([...read(F.tickets,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));app.put("/api/tickets/:id/printed",(q,r)=>{const list=read(F.tickets,[]),idx=list.findIndex(t=>n(t.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Fiş bulunamadı."});list[idx].printedAt=now();write(F.tickets,list);r.json(list[idx])});

@@ -61,7 +61,7 @@ function firstImage(product) {
 }
 
 export default function App() {
-  const [authToken,setAuthToken]=useState(()=>localStorage.getItem("sheliva-token")||"");
+  const [authToken,setAuthToken]=useState(()=>localStorage.getItem("sheliva-token")||sessionStorage.getItem("sheliva-token")||"");
   const [authUser,setAuthUser]=useState(null);
   const [authOpen,setAuthOpen]=useState(false);
   const [authMode,setAuthMode]=useState("login");
@@ -74,6 +74,10 @@ export default function App() {
   const [authBusy,setAuthBusy]=useState(false);
   const [resetStep,setResetStep]=useState("email");
   const [resetEmail,setResetEmail]=useState("");
+  const [loginCodeSent,setLoginCodeSent]=useState(false);
+  const [loginDraft,setLoginDraft]=useState(null);
+  const [loginCode,setLoginCode]=useState("");
+  const [rememberMe,setRememberMe]=useState(true);
 
   const [toast,setToast]=useState(null);
   const [accountOpen,setAccountOpen]=useState(false);
@@ -426,6 +430,36 @@ export default function App() {
     discounted[0] ||
     products[0];
 
+  function pickCategoryProduct(list){
+    const available=(list||[]).filter(p=>firstImage(p));
+    if(!available.length) return null;
+
+    const sold=[...available].sort((a,b)=>n(b.totalSold)-n(a.totalSold));
+    if(n(sold[0]?.totalSold)>0) return sold[0];
+
+    return [...available].sort((a,b)=>salePrice(b)-salePrice(a))[0];
+  }
+
+  const categoryCards=useMemo(()=>{
+    const newest=[...products].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+
+    const definitions=[
+      ["YAZLIK","Yazlık",products.filter(p=>p.category==="Yazlık")],
+      ["KIŞLIK","Kışlık",products.filter(p=>p.category==="Kışlık")],
+      ["YENİ SEZON","Yeni Sezon",products.filter(p=>p.newest!==false)],
+      ["İNDİRİMDE","İndirimde",products.filter(p=>n(p.discount)>0)],
+      ["TÜM ÜRÜNLER","Tümü",products],
+      ["SON GELENLER","Son Gelenler",newest]
+    ];
+
+    return definitions
+      .map(([title,key,list])=>{
+        const product=pickCategoryProduct(list);
+        return product ? {title,key,product,img:imageUrl(firstImage(product))} : null;
+      })
+      .filter(Boolean);
+  },[products]);
+
   async function loadMyOrders() {
     if(!authToken){
       setAuthMode("login");
@@ -496,6 +530,22 @@ export default function App() {
     window.open(`https://www.instagram.com/${username}/`,"_blank","noopener,noreferrer");
   }
 
+  function instagramHref(){
+    const raw=String(settings.instagramUrl||"").trim();
+    if(!raw) return "";
+    if(/^https?:\/\//i.test(raw)) return raw;
+    return `https://instagram.com/${raw.replace(/^@/,"")}`;
+  }
+
+  function whatsappHref(){
+    const raw=String(settings.whatsappUrl||settings.supportPhone||"").trim();
+    if(!raw) return "";
+    if(/^https?:\/\//i.test(raw)) return raw;
+    const digits=raw.replace(/\D/g,"");
+    const number=digits.startsWith("0") ? `9${digits}` : (digits.length===10 ? `90${digits}` : digits);
+    return number ? `https://wa.me/${number}` : "";
+  }
+
   function showToast(message,detail="",type="success") {
     setToast({message,detail,type});
 
@@ -525,7 +575,7 @@ export default function App() {
   }
 
   function clearSavedAddress() {
-    if(!window.confirm("Kayıtlı teslimat adresi silinsin mi?")) return;
+    
 
     setSavedAddress(null);
     localStorage.removeItem("sheliva-saved-address");
@@ -750,13 +800,6 @@ export default function App() {
     event.preventDefault();
 
 
-    const approved=window.confirm(
-      "Sipariş talebini oluşturmak istiyor musunuz?\n\n"+
-      "Ödeme WhatsApp veya Instagram DM üzerinden yapılacaktır. "+
-      "Sipariş, ödeme yönetici tarafından onaylanana kadar kesinleşmez ve stoktan düşmez."
-    );
-    if(!approved) return;
-
     const form =
       new FormData(
         event.currentTarget
@@ -830,22 +873,77 @@ export default function App() {
     if(!token){setAuthUser(null);return}
     try{
       const res=await fetch(`${API}/api/auth/me`,{headers:{Authorization:`Bearer ${token}`}});
-      if(!res.ok){localStorage.removeItem("sheliva-token");setAuthToken("");setAuthUser(null);return}
+      if(!res.ok){localStorage.removeItem("sheliva-token");sessionStorage.removeItem("sheliva-token");setAuthToken("");setAuthUser(null);return}
       setAuthUser(await res.json());
     }catch{setAuthUser(null)}
   }
 
   async function loginUser(event) {
     event.preventDefault();
+    if(authBusy) return;
+
     const form=new FormData(event.currentTarget);
-    const res=await fetch(`${API}/api/auth/login`,{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({login:form.get("login"),password:form.get("password")})
-    });
-    const data=await res.json();
-    if(!res.ok)return showToast(data.error||"Giriş yapılamadı.");
-    localStorage.setItem("sheliva-token",data.token);
-    setAuthToken(data.token);setAuthUser(data.user);setAuthOpen(false);
+
+    if(!loginCodeSent){
+      const draft={
+        email:String(form.get("login")||"").trim().toLowerCase(),
+        password:String(form.get("password")||"")
+      };
+
+      setAuthBusy(true);
+      try{
+        const res=await fetch(`${API}/api/auth/login/request-code`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(draft)
+        });
+
+        const data=await res.json();
+        if(!res.ok) return showToast(data.error||"Giriş kodu gönderilemedi.","","error");
+
+        setLoginDraft(draft);
+        setLoginCodeSent(true);
+        showToast("Giriş kodu gönderildi","E-posta adresinize gelen 6 haneli kodu girin.");
+      }catch{
+        showToast("Bağlantı hatası","Tekrar deneyin.","error");
+      }finally{
+        setAuthBusy(false);
+      }
+      return;
+    }
+
+    setAuthBusy(true);
+    try{
+      const res=await fetch(`${API}/api/auth/login-email`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({...loginDraft,code:loginCode,remember:rememberMe})
+      });
+
+      const data=await res.json();
+      if(!res.ok) return showToast(data.error||"Giriş yapılamadı.","","error");
+
+      localStorage.removeItem("sheliva-token");
+      sessionStorage.removeItem("sheliva-token");
+
+      if(rememberMe){
+        localStorage.setItem("sheliva-token",data.token);
+      }else{
+        sessionStorage.setItem("sheliva-token",data.token);
+      }
+
+      setAuthToken(data.token);
+      setAuthUser(data.user);
+      setAuthOpen(false);
+      setLoginCodeSent(false);
+      setLoginDraft(null);
+      setLoginCode("");
+      showToast("Giriş başarılı",`Hoş geldin ${data.user?.name||""}`);
+    }catch{
+      showToast("Bağlantı hatası","Tekrar deneyin.","error");
+    }finally{
+      setAuthBusy(false);
+    }
   }
 
   async function registerUser(event) {
@@ -989,9 +1087,9 @@ export default function App() {
   }
 
   async function logoutUser() {
-    if(!window.confirm("Hesaptan çıkış yapılsın mı?"))return;
+    
     if(authToken){try{await fetch(`${API}/api/auth/logout`,{method:"POST",headers:{Authorization:`Bearer ${authToken}`}})}catch{}}
-    localStorage.removeItem("sheliva-token");setAuthToken("");setAuthUser(null);
+    localStorage.removeItem("sheliva-token");sessionStorage.removeItem("sheliva-token");setAuthToken("");setAuthUser(null);
   }
 
   if (loading) {
@@ -1007,14 +1105,28 @@ export default function App() {
 
       <header className="header">
 
-        <button
-          className="menu"
-          onClick={()=>goHome()}
-        >
-          ☰
-          {" "}
-          <small>MENU</small>
-        </button>
+        <div className="headerLeft">
+          <button
+            className="menu"
+            onClick={()=>goHome()}
+          >
+            ☰
+            {" "}
+            <small>MENU</small>
+          </button>
+
+          {instagramHref() && (
+            <a className="headerSocial instagram" href={instagramHref()} target="_blank" rel="noreferrer" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+            </a>
+          )}
+
+          {whatsappHref() && (
+            <a className="headerSocial whatsapp" href={whatsappHref()} target="_blank" rel="noreferrer" aria-label="WhatsApp">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.7A8 8 0 0 1 8.2 18.8L4 20l1.2-4A8 8 0 1 1 20 11.7Z"/><path d="M9 8.5c.3 2.4 2.1 4.3 4.6 5l1.2-1.1 2 .8c-.4 1.6-1.7 2.5-3.2 2.3-3.6-.5-6.5-3.3-7-6.8-.2-1.4.7-2.8 2.2-3.2l.8 2Z"/></svg>
+            </a>
+          )}
+        </div>
 
         <button
           className="brand"
@@ -1172,59 +1284,20 @@ export default function App() {
 
           </section>
 
-          <section className="categoryGrid">
-
-            {[
-              [
-                "YAZLIK",
-                "Yazlık",
-                "/products/yazlik-2.png"
-              ],
-              [
-                "KIŞLIK",
-                "Kışlık",
-                "/products/kislik-2.png"
-              ],
-              [
-                "YENİ SEZON",
-                "Yeni Sezon",
-                "/products/yazlik-4.png"
-              ],
-              [
-                "İNDİRİMDE",
-                "İndirimde",
-                discounted[0]
-                  ? imageUrl(
-                      firstImage(discounted[0])
-                    )
-                  : "/products/kislik-4.png"
-              ],
-              [
-                "TÜM ÜRÜNLER",
-                "Tümü",
-                "/products/yazlik-1.png"
-              ],
-              [
-                "SON GELENLER",
-                "Son Gelenler",
-                "/products/kislik-3.png"
-              ]
-            ].map(
-              ([title,key,img]) => (
+          {categoryCards.length>0 && (
+            <section className="categoryGrid">
+              {categoryCards.map(card=>(
                 <button
-                  key={title}
-                  onClick={()=>
-                    goHome(key)
-                  }
+                  key={card.title}
+                  onClick={()=>goHome(card.key)}
                 >
-                  <img src={img}/>
-                  <strong>{title}</strong>
+                  <img src={card.img} alt={card.product.name}/>
+                  <strong>{card.title}</strong>
                   <span>by SHELİVA</span>
                 </button>
-              )
-            )}
-
-          </section>
+              ))}
+            </section>
+          )}
 
           <section
             id="products"
@@ -1720,21 +1793,68 @@ export default function App() {
             </div>
 
             {authMode==="login" ? (
-              <form className="authForm" onSubmit={loginUser}>
-                <label>E-posta<input name="login" type="email" required placeholder="mail@ornek.com"/></label>
-                <label>Şifre<input name="password" type="password" required placeholder="Şifren"/></label>
-                                <button disabled={authBusy}>{authBusy ? "BEKLEYİN..." : "GİRİŞ YAP"}</button>
-                <button
-                  type="button"
-                  className="authSecondary"
-                  onClick={()=>{
-                    setAuthMode("forgot");
-                    setResetStep("email");
-                  }}
-                >
-                  ŞİFREMİ UNUTTUM
-                </button>
-              </form>
+              !loginCodeSent ? (
+                <form className="authForm" onSubmit={loginUser}>
+                  <label>E-posta<input name="login" type="email" required placeholder="mail@ornek.com"/></label>
+                  <label>Şifre<input name="password" type="password" required placeholder="Şifren"/></label>
+
+                  <label className="rememberOption">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={e=>setRememberMe(e.target.checked)}
+                    />
+                    <span>
+                      <b>Beni hatırla</b>
+                      <small>Bu cihazda oturumum açık kalsın.</small>
+                    </span>
+                  </label>
+
+                  <button disabled={authBusy}>{authBusy ? "KOD GÖNDERİLİYOR..." : "GİRİŞ KODU GÖNDER"}</button>
+                  <button
+                    type="button"
+                    className="authSecondary"
+                    onClick={()=>{
+                      setAuthMode("forgot");
+                      setResetStep("email");
+                    }}
+                  >
+                    ŞİFREMİ UNUTTUM
+                  </button>
+                </form>
+              ) : (
+                <form className="authForm" onSubmit={loginUser}>
+                  <div className="verifyLater">
+                    <b>{loginDraft?.email}</b> adresine gönderilen 6 haneli giriş kodunu girin.
+                  </div>
+                  <label>Giriş Kodu
+                    <input
+                      value={loginCode}
+                      onChange={e=>setLoginCode(e.target.value.replace(/\D/g,"").slice(0,6))}
+                      inputMode="numeric"
+                      required
+                      minLength="6"
+                      maxLength="6"
+                      placeholder="000000"
+                      style={{fontSize:24,letterSpacing:8,textAlign:"center"}}
+                    />
+                  </label>
+                  <button disabled={authBusy||loginCode.length!==6}>
+                    {authBusy ? "DOĞRULANIYOR..." : "KODU DOĞRULA VE GİRİŞ YAP"}
+                  </button>
+                  <button
+                    type="button"
+                    className="authSecondary"
+                    onClick={()=>{
+                      setLoginCodeSent(false);
+                      setLoginDraft(null);
+                      setLoginCode("");
+                    }}
+                  >
+                    BİLGİLERİ DEĞİŞTİR
+                  </button>
+                </form>
+              )
             ) : authMode==="forgot" ? (
               resetStep==="email" ? (
                 <form className="authForm" onSubmit={requestPasswordReset}>

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap");
 
 * {
   box-sizing: border-box;
@@ -2174,3 +2174,74 @@ a {
 
 /* SHELIVA sipariş takip geliştirmeleri */
 .ordersAccountCard{grid-column:1/-1}.emptyOrders{display:grid;gap:6px;padding:22px;border:1px dashed #d8d8d8;border-radius:14px;background:#fafafa;text-align:center}.emptyOrders span{color:#777}.myOrdersList{display:grid;gap:14px;margin-top:14px}.myOrderCard{border:1px solid #e5e5e5;border-radius:16px;padding:16px;background:#fff}.myOrderHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.myOrderHead>div{display:grid;gap:4px}.myOrderHead small{color:#777}.orderStatus{padding:7px 11px;border-radius:999px;background:#fff5d8;color:#6f5200;font-size:12px;font-weight:800}.orderProgress{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0}.orderProgress span{padding:8px 6px;border-radius:8px;background:#f0f0f0;color:#888;text-align:center;font-size:11px;font-weight:700}.orderProgress span.done{background:#111;color:#fff}.myOrderItems{display:grid;gap:7px;padding:12px 0;border-top:1px solid #eee;border-bottom:1px solid #eee}.myOrderItems>div{display:flex;justify-content:space-between;gap:12px;font-size:13px}.myOrderInfo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px;font-size:13px}.orderContactButtons,.successContactButtons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.orderContactButtons button,.successContactButtons button{border:0;border-radius:10px;padding:12px;background:#111;color:#fff;font-weight:800;cursor:pointer}.checkoutNotice,.successWarning{margin:14px 0;padding:14px 16px;border:1px solid #ead9aa;border-radius:12px;background:#fff9e8;line-height:1.5}.secondarySuccessButton{margin-top:10px!important;background:#eee!important;color:#111!important}.siteFooter section button{border:0;background:none;padding:0;text-align:left;color:inherit;cursor:pointer;font:inherit}.orderRequestSuccess{max-width:520px}.contactPaymentChoices label{cursor:default}@media(max-width:700px){.myOrderInfo{grid-template-columns:1fr}.orderProgress{grid-template-columns:1fr 1fr}.orderContactButtons,.successContactButtons{grid-template-columns:1fr}.headerIcons{gap:6px}.headerAccount{font-size:10px;padding:8px 7px}}
+
+/* SHELIVA_HEADER_SOCIAL_V1 */
+.headerLeft{
+  justify-self:start;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.headerSocial{
+  width:30px;
+  height:30px;
+  border:1px solid #3b3b3b;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  transition:.2s;
+}
+
+.headerSocial:hover{
+  transform:translateY(-1px);
+  border-color:#319777;
+  background:#202322;
+}
+
+.headerSocial svg{
+  width:16px;
+  height:16px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  color:#f2f2f2;
+}
+
+.rememberOption{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center;
+  gap:12px;
+  padding:12px 0;
+  cursor:pointer;
+}
+
+.rememberOption input{
+  width:18px;
+  height:18px;
+  accent-color:#2d9f7b;
+}
+
+.rememberOption span{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.rememberOption small{
+  opacity:.62;
+}
+
+@media(max-width:760px){
+  .header{
+    padding:0 14px;
+  }
+  .headerLeft{
+    gap:6px;
+  }
+  .headerSocial{
+    width:28px;
+    height:28px;
+  }
+}
