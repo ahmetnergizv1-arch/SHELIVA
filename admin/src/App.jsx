@@ -1500,6 +1500,30 @@ export default function App() {
         />
       )}
 
+      {/* SHELIVA_ORDER_CANCEL_BUTTON_V1 */}
+      {selectedOrder && selectedOrder.status!=="İptal" && (
+        <button
+          type="button"
+          onClick={()=>changeOrderStatus(selectedOrder,"İptal")}
+          style={{
+            position:"fixed",
+            right:28,
+            bottom:28,
+            zIndex:5000,
+            border:0,
+            borderRadius:12,
+            padding:"14px 18px",
+            background:"#b42318",
+            color:"#fff",
+            fontWeight:800,
+            cursor:"pointer",
+            boxShadow:"0 12px 34px rgba(180,35,24,.35)"
+          }}
+        >
+          SİPARİŞİ İPTAL ET
+        </button>
+      )}
+
     </div>
   );
 }

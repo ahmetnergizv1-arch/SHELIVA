@@ -1,12 +1,1 @@
-[
-  {
-    "id": 1,
-    "name": "Ahmet Nergiz",
-    "phone": "905526446258",
-    "email": "ahmetnergizv1@gmail.com",
-    "passwordHash": "90c80ae0b40dcd4e76593af9e484b1de:1ec9b28b2c565e1e44d12f0b0d5ff149942365e331c2d1947fe1a4c68d8b279eed008469e6fc1d130789ebe04182c8da0e1ad3e10508402228f24aa5a3c3b9ef",
-    "verified": false,
-    "addresses": [],
-    "createdAt": "2026-07-27T21:48:23.709Z"
-  }
-]
+﻿[]
