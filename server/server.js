@@ -5,7 +5,7 @@ import path from "path";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 
-const app=express(); const PORT=3001;
+const app=express(); const PORT=Number(process.env.PORT || 10000);
 const __filename=fileURLToPath(import.meta.url); const __dirname=path.dirname(__filename);
 const DATA=path.join(__dirname,"data"), UP=path.join(__dirname,"uploads");
 fs.mkdirSync(DATA,{recursive:true}); fs.mkdirSync(UP,{recursive:true});
