@@ -2915,3 +2915,134 @@ a {
 }
 
 /* SHELIVA_ACCOUNT_ORDERS_DARK_V2_END */
+
+/* SHELIVA_MOBILE_PRODUCT_GALLERY_V5_START */
+@media (max-width: 760px) {
+  .productPage {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 8px 0 0 !important;
+  }
+
+  .detailTop,
+  .v3Product {
+    display: block !important;
+    width: 100% !important;
+    background: #0f1110 !important;
+  }
+
+  .gallery,
+  .galleryV3 {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 8px 0 0 !important;
+    display: flex !important;
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+    background: #0f1110 !important;
+  }
+
+  .mainPhoto,
+  .mainPhotoV3 {
+    width: 100% !important;
+    height: min(118vw, 560px) !important;
+    min-height: 0 !important;
+    max-height: 560px !important;
+    background: #ece9e4 !important;
+    overflow: hidden !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 0 !important;
+  }
+
+  .mainPhoto > img,
+  .mainPhotoV3 img {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    object-fit: contain !important;
+    object-position: center bottom !important;
+    background: #ece9e4 !important;
+  }
+
+  .thumbs,
+  .thumbsV3 {
+    width: 100% !important;
+    height: 88px !important;
+    max-height: 88px !important;
+    padding: 0 8px 8px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 7px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+    background: #0f1110 !important;
+  }
+
+  .thumbs::-webkit-scrollbar,
+  .thumbsV3::-webkit-scrollbar {
+    display: none;
+  }
+
+  .thumbs button,
+  .thumbsV3 button {
+    flex: 0 0 74px !important;
+    width: 74px !important;
+    min-width: 74px !important;
+    height: 80px !important;
+    padding: 0 !important;
+    border: 1px solid #343836 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    background: #ece9e4 !important;
+  }
+
+  .thumbs button.active,
+  .thumbsV3 button.active {
+    border: 2px solid #31a27e !important;
+  }
+
+  .thumbs img,
+  .thumbsV3 img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    object-position: center bottom !important;
+    background: #ece9e4 !important;
+  }
+
+  .dots {
+    bottom: 10px !important;
+    z-index: 3;
+  }
+
+  .detailInfo {
+    width: 100% !important;
+    padding: 22px 16px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .mainPhoto,
+  .mainPhotoV3 {
+    height: 112vw !important;
+    max-height: 500px !important;
+  }
+
+  .thumbs,
+  .thumbsV3 {
+    height: 80px !important;
+    max-height: 80px !important;
+  }
+
+  .thumbs button,
+  .thumbsV3 button {
+    flex-basis: 66px !important;
+    width: 66px !important;
+    min-width: 66px !important;
+    height: 72px !important;
+  }
+}
+/* SHELIVA_MOBILE_PRODUCT_GALLERY_V5_END */
