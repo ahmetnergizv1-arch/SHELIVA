@@ -3,6 +3,7 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 import { fileURLToPath } from "url";
 
 const app=express(); const PORT=Number(process.env.PORT || 10000);
@@ -48,6 +49,202 @@ function needAdmin(req,res,next){
 
   session.expiresAt=Date.now()+ADMIN_SESSION_MS;
   next();
+}
+/* SHELIVA_MAIL_SYSTEM_V1 */
+const MAIL_CODE_TTL=5*60*1000;
+
+function normalizeEmail(value=""){
+  return String(value||"").trim().toLowerCase();
+}
+
+function mailTransport(){
+  const user=String(process.env.GMAIL_USER||"").trim();
+  const pass=String(process.env.GMAIL_APP_PASSWORD||"").replace(/\s/g,"");
+
+  if(!user||!pass) return null;
+
+  return nodemailer.createTransport({
+    service:"gmail",
+    auth:{user,pass}
+  });
+}
+
+function emailShell({title,preheader="",body,code=""}){
+  return `<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>${title}</title>
+</head>
+<body style="margin:0;background:#f5f2ec;font-family:Arial,Helvetica,sans-serif;color:#171717">
+<div style="display:none;max-height:0;overflow:hidden">${preheader}</div>
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f5f2ec;padding:28px 12px">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:620px;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.08)">
+<tr>
+<td style="background:#111;padding:30px;text-align:center;color:#fff">
+<div style="font-family:Georgia,serif;font-size:32px;letter-spacing:8px">SHELİVA</div>
+<div style="font-size:11px;letter-spacing:3px;margin-top:8px;color:#d6d6d6">GERÇEK DERİ • KENDİ ÜRETİMİMİZ</div>
+</td>
+</tr>
+<tr>
+<td style="padding:34px 34px 18px">
+<h1 style="font-family:Georgia,serif;font-size:27px;margin:0 0 18px">${title}</h1>
+<div style="font-size:16px;line-height:1.7;color:#444">${body}</div>
+${code ? `<div style="margin:28px 0;padding:20px;text-align:center;background:#f7f4ee;border:1px solid #e8e0d3;border-radius:14px;font-size:34px;letter-spacing:10px;font-weight:800;color:#111">${code}</div>` : ""}
+</td>
+</tr>
+<tr>
+<td style="padding:8px 34px 34px;color:#777;font-size:13px;line-height:1.6">
+Bu işlemi siz yapmadıysanız bu e-postayı dikkate almayabilirsiniz.<br>
+© ${new Date().getFullYear()} SHELİVA
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+async function sendMail({to,subject,title,body,code=""}){
+  const transport=mailTransport();
+  const from=String(process.env.GMAIL_USER||"").trim();
+
+  if(!transport){
+    console.warn("MAIL PASIF: GMAIL_USER veya GMAIL_APP_PASSWORD eksik.");
+    return {ok:false,disabled:true};
+  }
+
+  if(!to) return {ok:false};
+
+  try{
+    const result=await transport.sendMail({
+      from:`SHELİVA <${from}>`,
+      to,
+      subject,
+      html:emailShell({
+        title,
+        preheader:subject,
+        body,
+        code
+      })
+    });
+
+    return {ok:true,id:result.messageId};
+  }catch(error){
+    console.error("MAIL HATASI:",error?.message||error);
+    return {ok:false,error:error?.message||"Mail gönderilemedi."};
+  }
+}
+
+function createEmailCode(email,purpose){
+  const list=read(F.otp,[])
+    .filter(x=>new Date(x.expiresAt).getTime()>Date.now())
+    .filter(x=>!(x.email===email&&x.purpose===purpose));
+
+  const code=String(Math.floor(100000+Math.random()*900000));
+
+  list.push({
+    email,
+    purpose,
+    codeHash:crypto.createHash("sha256").update(code).digest("hex"),
+    attempts:0,
+    createdAt:now(),
+    expiresAt:new Date(Date.now()+MAIL_CODE_TTL).toISOString()
+  });
+
+  write(F.otp,list);
+  return code;
+}
+
+function consumeEmailCode(email,purpose,code){
+  const list=read(F.otp,[]);
+  const idx=list.findIndex(x=>
+    x.email===email &&
+    x.purpose===purpose &&
+    new Date(x.expiresAt).getTime()>Date.now()
+  );
+
+  if(idx<0) return false;
+
+  list[idx].attempts=n(list[idx].attempts)+1;
+
+  if(list[idx].attempts>5){
+    list.splice(idx,1);
+    write(F.otp,list);
+    return false;
+  }
+
+  const hashCode=crypto.createHash("sha256").update(String(code||"")).digest("hex");
+  const valid=hashCode===list[idx].codeHash;
+
+  if(valid) list.splice(idx,1);
+  write(F.otp,list);
+  return valid;
+}
+
+function orderItemsHtml(order){
+  const rows=(order.items||[]).map(item=>
+    `<tr>
+      <td style="padding:10px 0;border-bottom:1px solid #eee">${item.name}<br><span style="color:#777;font-size:13px">${item.colorName} • ${item.size} numara</span></td>
+      <td align="right" style="padding:10px 0;border-bottom:1px solid #eee">${item.qty} adet</td>
+    </tr>`
+  ).join("");
+
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0">${rows}</table>`;
+}
+
+async function sendOrderEmail(order,type){
+  const email=normalizeEmail(order?.customer?.email);
+  if(!email) return;
+
+  const map={
+    created:{
+      subject:`${order.orderNo} numaralı sipariş talebiniz alındı`,
+      title:"Sipariş talebiniz alındı",
+      text:`Sipariş talebiniz oluşturuldu. Ödeme için WhatsApp veya Instagram üzerinden iletişime geçebilirsiniz. Ödeme yönetici tarafından onaylanana kadar stok düşmez ve sipariş kesinleşmez.`
+    },
+    paid:{
+      subject:`${order.orderNo} ödeme onayı`,
+      title:"Ödemeniz onaylandı",
+      text:"Ödemeniz kontrol edildi ve onaylandı. Siparişiniz hazırlık sürecine alındı."
+    },
+    preparing:{
+      subject:`${order.orderNo} hazırlanıyor`,
+      title:"Siparişiniz hazırlanıyor",
+      text:"Ürünleriniz özenle hazırlanıyor. Kargoya teslim edildiğinde takip bilgilerini ayrıca paylaşacağız."
+    },
+    shipped:{
+      subject:`${order.orderNo} kargoya verildi`,
+      title:"Siparişiniz kargoya verildi",
+      text:`Kargo firması: <b>${order.cargoCompany||"-"}</b><br>Takip numarası: <b>${order.cargoTracking||"-"}</b>${order.cargoNote?`<br>Kargo notu: ${order.cargoNote}`:""}`
+    },
+    cancelled:{
+      subject:`${order.orderNo} iptal bilgisi`,
+      title:"Siparişiniz iptal edildi",
+      text:"Siparişiniz iptal edildi. Ödeme yaptıysanız iade süreci için bizimle iletişime geçebilirsiniz."
+    },
+    delivered:{
+      subject:`${order.orderNo} teslim edildi`,
+      title:"Siparişiniz teslim edildi",
+      text:"Siparişiniz teslim edildi olarak işaretlendi. SHELİVA’yı tercih ettiğiniz için teşekkür ederiz."
+    }
+  };
+
+  const item=map[type];
+  if(!item) return;
+
+  await sendMail({
+    to:email,
+    subject:item.subject,
+    title:item.title,
+    body:`<p style="margin-top:0">${item.text}</p>
+          <p><b>Sipariş No:</b> ${order.orderNo}</p>
+          ${orderItemsHtml(order)}
+          <p style="font-size:18px"><b>Toplam:</b> ${n(order.total).toLocaleString("tr-TR",{style:"currency",currency:"TRY"})}</p>`
+  });
 }
 const sale=p=>Math.round(n(p.price)*(1-Math.max(0,Math.min(100,n(p.discount)))/100)*100)/100;
 const cost=p=>{const buy=n(p.purchasePrice),vat=buy*n(p.vatRate)/100;return Math.round((buy+vat+n(p.shippingCost)+n(p.packagingCost)+n(p.otherCost))*100)/100};
@@ -97,6 +294,145 @@ app.post("/api/admin/logout",needAdmin,(q,r)=>{
 
 app.post("/api/auth/request-otp",(q,r)=>{const p=phone(q.body.phone);if(p.length<10)return r.status(400).json({error:"Geçerli telefon gir."});let list=read(F.otp,[]).filter(x=>new Date(x.expiresAt).getTime()>Date.now());if(list.filter(x=>x.phone===p&&Date.now()-new Date(x.createdAt).getTime()<60000).length>=3)return r.status(429).json({error:"Çok fazla kod istedin. 1 dakika bekle."});const code=String(Math.floor(100000+Math.random()*900000));list.push({phone:p,code,createdAt:now(),expiresAt:new Date(Date.now()+300000).toISOString()});write(F.otp,list);console.log(`\n===== SHELIVA TEST OTP =====\nTELEFON: ${p}\nKOD: ${code}\n============================\n`);r.json({ok:true})});
 
+app.post("/api/auth/email/request-code",async(q,r)=>{
+  const email=normalizeEmail(q.body.email);
+  const purpose=String(q.body.purpose||"register");
+
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    return r.status(400).json({error:"Geçerli bir e-posta adresi girin."});
+  }
+
+  if(purpose==="register" && read(F.users,[]).some(u=>u.email===email)){
+    return r.status(409).json({error:"Bu e-posta adresi zaten kayıtlı."});
+  }
+
+  if(purpose==="reset" && !read(F.users,[]).some(u=>u.email===email)){
+    return r.json({ok:true});
+  }
+
+  const recent=read(F.otp,[]).filter(x=>
+    x.email===email &&
+    x.purpose===purpose &&
+    Date.now()-new Date(x.createdAt).getTime()<60000
+  );
+
+  if(recent.length>=2){
+    return r.status(429).json({error:"Çok sık kod istediniz. 1 dakika bekleyin."});
+  }
+
+  const code=createEmailCode(email,purpose);
+  const isReset=purpose==="reset";
+
+  const result=await sendMail({
+    to:email,
+    subject:isReset ? "SHELİVA şifre sıfırlama kodu" : "SHELİVA e-posta doğrulama kodu",
+    title:isReset ? "Şifrenizi yenileyin" : "E-posta adresinizi doğrulayın",
+    body:isReset
+      ? `<p>Hesabınız için şifre sıfırlama talebi aldık.</p><p>Aşağıdaki kodu sitedeki doğrulama alanına girin. Kod <b>5 dakika</b> geçerlidir.</p>`
+      : `<p>SHELİVA hesabınızı oluşturmak üzeresiniz.</p><p>Aşağıdaki doğrulama kodunu sitedeki alana girin. Kod <b>5 dakika</b> geçerlidir.</p>`,
+    code
+  });
+
+  if(!result.ok){
+    return r.status(500).json({error:"Doğrulama e-postası gönderilemedi. Lütfen tekrar deneyin."});
+  }
+
+  r.json({ok:true});
+});
+
+app.post("/api/auth/register-email",async(q,r)=>{
+  const p=phone(q.body.phone);
+  const email=normalizeEmail(q.body.email);
+  const name=String(q.body.name||"").trim();
+  const pw=String(q.body.password||"");
+  const code=String(q.body.code||"").trim();
+
+  if(!name||p.length<10||!email||pw.length<6){
+    return r.status(400).json({error:"Bilgileri kontrol edin. Şifre en az 6 karakter olmalıdır."});
+  }
+
+  if(!consumeEmailCode(email,"register",code)){
+    return r.status(400).json({error:"Doğrulama kodu yanlış veya süresi doldu."});
+  }
+
+  const users=read(F.users,[]);
+
+  if(users.some(u=>u.phone===p||u.email===email)){
+    return r.status(409).json({error:"Telefon veya e-posta zaten kayıtlı."});
+  }
+
+  const u={
+    id:nextId(users),
+    name,
+    phone:p,
+    email,
+    passwordHash:hash(pw),
+    verified:true,
+    emailVerified:true,
+    addresses:[],
+    createdAt:now()
+  };
+
+  users.push(u);
+  write(F.users,users);
+
+  const ss=read(F.sessions,[]);
+  const t=token();
+
+  ss.push({
+    token:t,
+    userId:u.id,
+    createdAt:now(),
+    expiresAt:new Date(Date.now()+30*86400000).toISOString()
+  });
+
+  write(F.sessions,ss);
+
+  sendMail({
+    to:email,
+    subject:"SHELİVA’ya hoş geldiniz",
+    title:"Hoş geldiniz",
+    body:`<p>Merhaba <b>${name}</b>,</p><p>E-posta adresiniz doğrulandı ve SHELİVA hesabınız başarıyla oluşturuldu.</p>`
+  }).catch(()=>{});
+
+  r.status(201).json({token:t,user:safe(u)});
+});
+
+app.post("/api/auth/password/reset",async(q,r)=>{
+  const email=normalizeEmail(q.body.email);
+  const code=String(q.body.code||"").trim();
+  const password=String(q.body.password||"");
+
+  if(password.length<6){
+    return r.status(400).json({error:"Yeni şifre en az 6 karakter olmalıdır."});
+  }
+
+  if(!consumeEmailCode(email,"reset",code)){
+    return r.status(400).json({error:"Kod yanlış veya süresi doldu."});
+  }
+
+  const users=read(F.users,[]);
+  const idx=users.findIndex(u=>u.email===email);
+
+  if(idx<0){
+    return r.status(404).json({error:"Hesap bulunamadı."});
+  }
+
+  users[idx].passwordHash=hash(password);
+  users[idx].passwordUpdatedAt=now();
+  write(F.users,users);
+
+  write(F.sessions,read(F.sessions,[]).filter(s=>n(s.userId)!==n(users[idx].id)));
+
+  sendMail({
+    to:email,
+    subject:"SHELİVA şifreniz değiştirildi",
+    title:"Şifreniz yenilendi",
+    body:"<p>Hesap şifreniz başarıyla değiştirildi. Bu işlemi siz yapmadıysanız bizimle iletişime geçin.</p>"
+  }).catch(()=>{});
+
+  r.json({ok:true});
+});
 app.post("/api/auth/register-simple",(q,r)=>{
   const p=phone(q.body.phone),email=String(q.body.email||"").trim().toLowerCase(),name=String(q.body.name||"").trim(),pw=String(q.body.password||"");
   if(!name||p.length<10||!email||pw.length<6)return r.status(400).json({error:"Bilgileri kontrol et. Şifre en az 6 karakter olmalı."});
@@ -138,8 +474,8 @@ app.post("/api/products",(q,r)=>{const list=read(F.products,[]),id=nextId(list),
 app.put("/api/products/:id",(q,r)=>{const id=n(q.params.id),list=read(F.products,[]),idx=list.findIndex(p=>n(p.id)===id);if(idx<0)return r.status(404).json({error:"Ürün bulunamadı."});const old=list[idx],colors=Array.isArray(q.body.colors)?q.body.colors.map((c,i)=>color(c,id,i)):old.colors||[];list[idx]={...old,...q.body,id,colors,image:colors?.[0]?.images?.[0]||old.image||"",updatedAt:now()};write(F.products,list);r.json(enrich(list[idx]))});app.delete("/api/products/:id",(q,r)=>{write(F.products,read(F.products,[]).filter(p=>n(p.id)!==n(q.params.id)));r.json({ok:true})});
 
 app.get("/api/orders",(q,r)=>r.json([...read(F.orders,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));
-app.post("/api/orders",(q,r)=>{const user=auth(q);const orders=read(F.orders,[]),products=read(F.products,[]),set=read(F.settings,DEF),items=Array.isArray(q.body.items)?q.body.items:[];if(!items.length)return r.status(400).json({error:"Sepet boş."});const out=[];for(const i of items){const p=products.find(x=>n(x.id)===n(i.productId)),c=p?.colors?.find(x=>x.id===i.colorId),size=String(i.size),qty=Math.max(1,n(i.qty)),st=n(c?.sizes?.[size]);if(!p||!c)return r.status(400).json({error:"Ürün varyantı bulunamadı."});if(st<=0)return r.status(400).json({error:`${p.name} ${c.name} ${size} tükendi.`});if(qty>st)return r.status(400).json({error:`En fazla ${st} adet alınabilir.`});out.push({key:`${p.id}-${c.id}-${size}`,productId:p.id,code:p.code,quality:p.quality||"",sole:p.sole||"",name:p.name,colorId:c.id,colorName:c.name,size,qty,listPrice:n(p.price),discount:n(p.discount),price:sale(p),unitCost:cost(p),image:c.images?.[0]||c.image||p.image||""})}/* SIPARIS_ONAY_AKISI_V1: stok odeme onayinda dusulecek */const id=nextId(orders),subtotal=out.reduce((s,i)=>s+n(i.price)*n(i.qty),0),cargoFee=subtotal>=n(set.freeShippingThreshold)?0:n(set.cargoFee);const o={id,orderNo:`${set.orderPrefix||"SH"}-${String(id).padStart(6,"0")}`,userId:user?.id||null,source:"SHELIVA Web",customer:{name:q.body.customer?.name||user?.name||"",phone:q.body.customer?.phone||user?.phone||"",email:q.body.customer?.email||user?.email||"",city:q.body.customer?.city||"",district:q.body.customer?.district||"",neighborhood:q.body.customer?.neighborhood||"",postalCode:q.body.customer?.postalCode||"",address:q.body.customer?.address||"",note:q.body.customer?.note||""},items:out,subtotal,cargoFee,total:subtotal+cargoFee,paymentMethod:q.body.paymentMethod||"Havale / EFT",paymentStatus:"Onay Bekliyor",status:"Yeni",statusHistory:[{status:"Yeni",at:now()}],createdAt:now(),cargoCompany:"",cargoTracking:"",cargoNote:"",actualCargoCost:0,refundCost:0};orders.push(o);write(F.orders,orders);r.status(201).json(o)});
-app.put("/api/orders/:id/status",(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const s=String(q.body.status||"");if(!["Yeni","Hazırlanıyor","Kargoya Verildi","Teslim Edildi","İptal"].includes(s))return r.status(400).json({error:"Geçersiz durum."});if(["Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].includes(s)&&list[idx].paymentStatus!=="Ödendi")return r.status(400).json({error:"Ödeme onaylanmadan sipariş ilerletilemez."});list[idx].status=s;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:s,at:now()}];if(s==="Kargoya Verildi"){list[idx].cargoCompany=q.body.cargoCompany||list[idx].cargoCompany||"";list[idx].cargoTracking=q.body.cargoTracking||list[idx].cargoTracking||"";list[idx].cargoNote=q.body.cargoNote||list[idx].cargoNote||"";list[idx].actualCargoCost=n(q.body.actualCargoCost??list[idx].actualCargoCost)}write(F.orders,list);write(F.tickets,read(F.tickets,[]).map(t=>n(t.orderId)===n(list[idx].id)?{...t,status:s,cargoCompany:list[idx].cargoCompany,cargoTracking:list[idx].cargoTracking}:t));r.json(list[idx])});
+app.post("/api/orders",(q,r)=>{const user=auth(q);const orders=read(F.orders,[]),products=read(F.products,[]),set=read(F.settings,DEF),items=Array.isArray(q.body.items)?q.body.items:[];if(!items.length)return r.status(400).json({error:"Sepet boş."});const out=[];for(const i of items){const p=products.find(x=>n(x.id)===n(i.productId)),c=p?.colors?.find(x=>x.id===i.colorId),size=String(i.size),qty=Math.max(1,n(i.qty)),st=n(c?.sizes?.[size]);if(!p||!c)return r.status(400).json({error:"Ürün varyantı bulunamadı."});if(st<=0)return r.status(400).json({error:`${p.name} ${c.name} ${size} tükendi.`});if(qty>st)return r.status(400).json({error:`En fazla ${st} adet alınabilir.`});out.push({key:`${p.id}-${c.id}-${size}`,productId:p.id,code:p.code,quality:p.quality||"",sole:p.sole||"",name:p.name,colorId:c.id,colorName:c.name,size,qty,listPrice:n(p.price),discount:n(p.discount),price:sale(p),unitCost:cost(p),image:c.images?.[0]||c.image||p.image||""})}/* SIPARIS_ONAY_AKISI_V1: stok odeme onayinda dusulecek */const id=nextId(orders),subtotal=out.reduce((s,i)=>s+n(i.price)*n(i.qty),0),cargoFee=subtotal>=n(set.freeShippingThreshold)?0:n(set.cargoFee);const o={id,orderNo:`${set.orderPrefix||"SH"}-${String(id).padStart(6,"0")}`,userId:user?.id||null,source:"SHELIVA Web",customer:{name:q.body.customer?.name||user?.name||"",phone:q.body.customer?.phone||user?.phone||"",email:q.body.customer?.email||user?.email||"",city:q.body.customer?.city||"",district:q.body.customer?.district||"",neighborhood:q.body.customer?.neighborhood||"",postalCode:q.body.customer?.postalCode||"",address:q.body.customer?.address||"",note:q.body.customer?.note||""},items:out,subtotal,cargoFee,total:subtotal+cargoFee,paymentMethod:q.body.paymentMethod||"Havale / EFT",paymentStatus:"Onay Bekliyor",status:"Yeni",statusHistory:[{status:"Yeni",at:now()}],createdAt:now(),cargoCompany:"",cargoTracking:"",cargoNote:"",actualCargoCost:0,refundCost:0};orders.push(o);write(F.orders,orders);sendOrderEmail(o,"created").catch(()=>{});r.status(201).json(o)});
+app.put("/api/orders/:id/status",(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const s=String(q.body.status||"");if(!["Yeni","Hazırlanıyor","Kargoya Verildi","Teslim Edildi","İptal"].includes(s))return r.status(400).json({error:"Geçersiz durum."});if(["Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].includes(s)&&list[idx].paymentStatus!=="Ödendi")return r.status(400).json({error:"Ödeme onaylanmadan sipariş ilerletilemez."});list[idx].status=s;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:s,at:now()}];if(s==="Kargoya Verildi"){list[idx].cargoCompany=q.body.cargoCompany||list[idx].cargoCompany||"";list[idx].cargoTracking=q.body.cargoTracking||list[idx].cargoTracking||"";list[idx].cargoNote=q.body.cargoNote||list[idx].cargoNote||"";list[idx].actualCargoCost=n(q.body.actualCargoCost??list[idx].actualCargoCost)}write(F.orders,list);write(F.tickets,read(F.tickets,[]).map(t=>n(t.orderId)===n(list[idx].id)?{...t,status:s,cargoCompany:list[idx].cargoCompany,cargoTracking:list[idx].cargoTracking}:t));const mailType={"Hazırlanıyor":"preparing","Kargoya Verildi":"shipped","Teslim Edildi":"delivered","İptal":"cancelled"}[s];if(mailType)sendOrderEmail(list[idx],mailType).catch(()=>{});r.json(list[idx])});
 app.post("/api/orders/:id/revert",(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const p={"Hazırlanıyor":"Yeni","Kargoya Verildi":"Hazırlanıyor","Teslim Edildi":"Kargoya Verildi"}[list[idx].status];if(!p)return r.status(400).json({error:"Bu durum geri alınamaz."});list[idx].status=p;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:p,at:now(),reverted:true}];write(F.orders,list);r.json(list[idx])});
 
 app.get("/api/tickets",(q,r)=>r.json([...read(F.tickets,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));app.put("/api/tickets/:id/printed",(q,r)=>{const list=read(F.tickets,[]),idx=list.findIndex(t=>n(t.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Fiş bulunamadı."});list[idx].printedAt=now();write(F.tickets,list);r.json(list[idx])});

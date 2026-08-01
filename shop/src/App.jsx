@@ -160,6 +160,14 @@ export default function App() {
   const [authMode,setAuthMode]=useState("login");
   const [otpSent,setOtpSent]=useState(false);
 
+  // SHELIVA_EMAIL_AUTH_V1
+  const [registerCodeSent,setRegisterCodeSent]=useState(false);
+  const [registerDraft,setRegisterDraft]=useState(null);
+  const [registerCode,setRegisterCode]=useState("");
+  const [authBusy,setAuthBusy]=useState(false);
+  const [resetStep,setResetStep]=useState("email");
+  const [resetEmail,setResetEmail]=useState("");
+
   const [toast,setToast]=useState(null);
   const [accountOpen,setAccountOpen]=useState(false);
   const [myOrders,setMyOrders]=useState([]);
@@ -847,16 +855,128 @@ export default function App() {
 
   async function registerUser(event) {
     event.preventDefault();
+    if(authBusy) return;
+
     const form=new FormData(event.currentTarget);
-    const res=await fetch(`${API}/api/auth/register-simple`,{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({name:form.get("name"),phone:form.get("phone"),email:form.get("email"),password:form.get("password")})
-    });
-    const data=await res.json();
-    if(!res.ok)return alert(data.error||"Hesap oluşturulamadı.");
-    localStorage.setItem("sheliva-token",data.token);
-    setAuthToken(data.token);setAuthUser(data.user);setAuthOpen(false);
-    alert("SHELİVA hesabın oluşturuldu.");
+
+    if(!registerCodeSent){
+      const draft={
+        name:String(form.get("name")||"").trim(),
+        phone:String(form.get("phone")||"").trim(),
+        email:String(form.get("email")||"").trim().toLowerCase(),
+        password:String(form.get("password")||"")
+      };
+
+      setAuthBusy(true);
+
+      try{
+        const res=await fetch(`${API}/api/auth/email/request-code`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({email:draft.email,purpose:"register"})
+        });
+
+        const data=await res.json();
+
+        if(!res.ok) return alert(data.error||"Kod gönderilemedi.");
+
+        setRegisterDraft(draft);
+        setRegisterCodeSent(true);
+        alert("6 haneli doğrulama kodu e-posta adresinize gönderildi.");
+      }finally{
+        setAuthBusy(false);
+      }
+
+      return;
+    }
+
+    setAuthBusy(true);
+
+    try{
+      const res=await fetch(`${API}/api/auth/register-email`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          ...registerDraft,
+          code:registerCode
+        })
+      });
+
+      const data=await res.json();
+
+      if(!res.ok) return alert(data.error||"Hesap oluşturulamadı.");
+
+      localStorage.setItem("sheliva-token",data.token);
+      setAuthToken(data.token);
+      setAuthUser(data.user);
+      setAuthOpen(false);
+      setRegisterCodeSent(false);
+      setRegisterDraft(null);
+      setRegisterCode("");
+      alert("E-posta adresiniz doğrulandı. SHELİVA hesabınız oluşturuldu.");
+    }finally{
+      setAuthBusy(false);
+    }
+  }
+
+  async function requestPasswordReset(event){
+    event.preventDefault();
+    if(authBusy) return;
+
+    const form=new FormData(event.currentTarget);
+    const email=String(form.get("email")||"").trim().toLowerCase();
+
+    setAuthBusy(true);
+
+    try{
+      const res=await fetch(`${API}/api/auth/email/request-code`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({email,purpose:"reset"})
+      });
+
+      const data=await res.json();
+
+      if(!res.ok) return alert(data.error||"Kod gönderilemedi.");
+
+      setResetEmail(email);
+      setResetStep("code");
+      alert("Şifre sıfırlama kodu e-posta adresinize gönderildi.");
+    }finally{
+      setAuthBusy(false);
+    }
+  }
+
+  async function completePasswordReset(event){
+    event.preventDefault();
+    if(authBusy) return;
+
+    const form=new FormData(event.currentTarget);
+
+    setAuthBusy(true);
+
+    try{
+      const res=await fetch(`${API}/api/auth/password/reset`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          email:resetEmail,
+          code:form.get("code"),
+          password:form.get("password")
+        })
+      });
+
+      const data=await res.json();
+
+      if(!res.ok) return alert(data.error||"Şifre değiştirilemedi.");
+
+      alert("Şifreniz değiştirildi. Yeni şifrenizle giriş yapabilirsiniz.");
+      setResetStep("email");
+      setResetEmail("");
+      setAuthMode("login");
+    }finally{
+      setAuthBusy(false);
+    }
   }
 
   async function logoutUser() {
@@ -1581,7 +1701,7 @@ export default function App() {
         <div className="authOverlay">
           <div className="authModal">
             <div className="authHead">
-              <div><small>SHELİVA</small><h2>{authMode==="login" ? "Giriş Yap" : "Üye Ol"}</h2></div>
+              <div><small>SHELİVA</small><h2>{authMode==="login" ? "Giriş Yap" : authMode==="forgot" ? "Şifremi Unuttum" : "Üye Ol"}</h2></div>
               <button onClick={()=>setAuthOpen(false)}>×</button>
             </div>
 
@@ -1594,17 +1714,77 @@ export default function App() {
               <form className="authForm" onSubmit={loginUser}>
                 <label>Telefon veya E-posta<input name="login" required placeholder="05xx... veya e-posta"/></label>
                 <label>Şifre<input name="password" type="password" required placeholder="Şifren"/></label>
-                <button>GİRİŞ YAP</button>
+                                <button disabled={authBusy}>{authBusy ? "BEKLEYİN..." : "GİRİŞ YAP"}</button>
+                <button
+                  type="button"
+                  className="authSecondary"
+                  onClick={()=>{
+                    setAuthMode("forgot");
+                    setResetStep("email");
+                  }}
+                >
+                  ŞİFREMİ UNUTTUM
+                </button>
               </form>
+            ) : authMode==="forgot" ? (
+              resetStep==="email" ? (
+                <form className="authForm" onSubmit={requestPasswordReset}>
+                  <div className="verifyLater">Hesabınıza kayıtlı e-posta adresini yazın. 6 haneli şifre sıfırlama kodu göndereceğiz.</div>
+                  <label>E-posta<input name="email" type="email" required placeholder="mail@ornek.com"/></label>
+                  <button disabled={authBusy}>{authBusy ? "GÖNDERİLİYOR..." : "ŞİFRE SIFIRLAMA KODU GÖNDER"}</button>
+                  <button type="button" className="authSecondary" onClick={()=>setAuthMode("login")}>GİRİŞE DÖN</button>
+                </form>
+              ) : (
+                <form className="authForm" onSubmit={completePasswordReset}>
+                  <div className="verifyLater"><b>{resetEmail}</b> adresine gelen kodu girin ve yeni şifrenizi belirleyin.</div>
+                  <label>6 Haneli Kod<input name="code" inputMode="numeric" required minLength="6" maxLength="6" placeholder="000000"/></label>
+                  <label>Yeni Şifre<input name="password" type="password" required minLength="6" placeholder="En az 6 karakter"/></label>
+                  <button disabled={authBusy}>{authBusy ? "DEĞİŞTİRİLİYOR..." : "ŞİFREYİ DEĞİŞTİR"}</button>
+                </form>
+              )
             ) : (
-              <form className="authForm" onSubmit={registerUser}>
-                <label>Ad Soyad<input name="name" required placeholder="Ad Soyad" defaultValue={savedAddress?.name || authUser?.name || ""}/></label>
-                <label>Telefon<input name="phone" required placeholder="05xx xxx xx xx"/></label>
-                <label>E-posta<input name="email" type="email" required placeholder="mail@ornek.com"/></label>
-                <label>Şifre<input name="password" type="password" required minLength="6" placeholder="En az 6 karakter"/></label>
-                <div className="verifyLater">Telefon doğrulaması daha sonra SMS sistemine bağlanacak.</div>
-                <button>HESAP OLUŞTUR</button>
-              </form>
+              !registerCodeSent ? (
+                <form className="authForm" onSubmit={registerUser}>
+                  <label>Ad Soyad<input name="name" required placeholder="Ad Soyad" defaultValue={savedAddress?.name || authUser?.name || ""}/></label>
+                  <label>Telefon<input name="phone" required placeholder="05xx xxx xx xx"/></label>
+                  <label>E-posta<input name="email" type="email" required placeholder="mail@ornek.com"/></label>
+                  <label>Şifre<input name="password" type="password" required minLength="6" placeholder="En az 6 karakter"/></label>
+                  <div className="verifyLater">Hesabınız açılmadan önce e-posta adresinize 6 haneli doğrulama kodu gönderilir.</div>
+                  <button disabled={authBusy}>{authBusy ? "KOD GÖNDERİLİYOR..." : "DOĞRULAMA KODU GÖNDER"}</button>
+                </form>
+              ) : (
+                <form className="authForm" onSubmit={registerUser}>
+                  <div className="verifyLater">
+                    <b>{registerDraft?.email}</b> adresine gönderilen 6 haneli kodu girin. Kod 5 dakika geçerlidir.
+                  </div>
+                  <label>Doğrulama Kodu
+                    <input
+                      value={registerCode}
+                      onChange={e=>setRegisterCode(e.target.value.replace(/\D/g,"").slice(0,6))}
+                      inputMode="numeric"
+                      required
+                      minLength="6"
+                      maxLength="6"
+                      placeholder="000000"
+                      style={{fontSize:24,letterSpacing:8,textAlign:"center"}}
+                    />
+                  </label>
+                  <button disabled={authBusy||registerCode.length!==6}>
+                    {authBusy ? "DOĞRULANIYOR..." : "KODU DOĞRULA VE HESAP AÇ"}
+                  </button>
+                  <button
+                    type="button"
+                    className="authSecondary"
+                    onClick={()=>{
+                      setRegisterCodeSent(false);
+                      setRegisterDraft(null);
+                      setRegisterCode("");
+                    }}
+                  >
+                    BİLGİLERİ DEĞİŞTİR
+                  </button>
+                </form>
+              )
             )}
           </div>
         </div>

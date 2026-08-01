@@ -1,7 +1,13 @@
 ﻿{
-  "name":"sheliva-server",
-  "version":"4.0.0",
-  "type":"module",
-  "scripts":{"start":"node server.js"},
-  "dependencies":{"cors":"^2.8.5","express":"^5.1.0"}
+    "name":  "sheliva-server",
+    "version":  "4.0.0",
+    "type":  "module",
+    "scripts":  {
+                    "start":  "node server.js"
+                },
+    "dependencies":  {
+                         "cors":  "^2.8.5",
+                         "express":  "^5.1.0",
+                         "nodemailer":  "^6.10.1"
+                     }
 }
