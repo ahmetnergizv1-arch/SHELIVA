@@ -2434,3 +2434,308 @@ a {
   }
 }
 /* SHELIVA_MOBILE_FULL_WIDTH_V1_END */
+
+/* SHELIVA_MOBILE_REFERENCE_V4_START */
+
+/* Ayakkabıyı kadrajın altına sabitle */
+.heroPhoto img {
+  object-position: center 88% !important;
+}
+
+.categoryGrid img {
+  object-position: center 90% !important;
+}
+
+.productImg img {
+  object-position: center 92% !important;
+}
+
+.mainPhotoV3 img,
+.mainPhoto > img,
+.colorSelector img,
+.drawerItem img,
+.thumbWrap img {
+  object-position: center 88% !important;
+}
+
+@media (max-width: 760px) {
+  html,
+  body,
+  #root,
+  .site {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden !important;
+  }
+
+  .homeMain {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .header {
+    width: 100%;
+    height: 66px !important;
+    padding: 0 9px !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    gap: 6px !important;
+    overflow: hidden;
+  }
+
+  .headerLeft {
+    min-width: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 5px !important;
+  }
+
+  .menu {
+    width: 35px;
+    padding: 0 !important;
+    font-size: 20px !important;
+  }
+
+  .menu small {
+    display: block;
+    margin: 2px 0 0 !important;
+    font-size: 7px !important;
+  }
+
+  .headerSocial {
+    width: 26px !important;
+    height: 26px !important;
+    flex: 0 0 26px;
+  }
+
+  .brand {
+    justify-self: center;
+    padding: 0 !important;
+    font-size: clamp(15px,4.4vw,20px) !important;
+    letter-spacing: clamp(3px,1.5vw,6px) !important;
+    white-space: nowrap;
+  }
+
+  .headerIcons {
+    min-width: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 4px !important;
+  }
+
+  .headerSearch {
+    display: none !important;
+  }
+
+  .headerAccount {
+    padding: 2px !important;
+    font-size: 7px !important;
+    letter-spacing: 0 !important;
+    white-space: nowrap;
+  }
+
+  .heroBanner,
+  .heroTop,
+  .heroBottom {
+    width: 100% !important;
+    height: 400px !important;
+    margin: 0 !important;
+    border-bottom: 5px solid #151616 !important;
+  }
+
+  .heroTop {
+    display: grid !important;
+    grid-template-columns: 64% 36% !important;
+  }
+
+  .heroBottom {
+    display: grid !important;
+    grid-template-columns: 36% 64% !important;
+  }
+
+  .heroPhoto,
+  .heroBlack {
+    min-width: 0 !important;
+    height: 100% !important;
+  }
+
+  .heroPhoto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover !important;
+    object-position: center 90% !important;
+  }
+
+  .heroBlack {
+    padding: 12px 7px !important;
+    overflow: hidden;
+  }
+
+  .heroBlack h1 {
+    max-width: 100%;
+    font-size: clamp(17px,4.6vw,24px) !important;
+    line-height: 1.05 !important;
+    white-space: normal !important;
+  }
+
+  .heroBlack b {
+    font-size: 8px !important;
+    letter-spacing: 3px !important;
+  }
+
+  .heroBlack i {
+    width: 38px !important;
+    margin: 15px 0 !important;
+  }
+
+  .heroBlack span {
+    font-size: 7px !important;
+    letter-spacing: 3px !important;
+    line-height: 1.6;
+  }
+
+  .heroAction {
+    margin-top: 15px !important;
+    padding: 8px 11px !important;
+    font-size: 7px !important;
+  }
+
+  .categoryGrid {
+    width: 100% !important;
+    margin: 8px 0 32px !important;
+    padding: 0 7px !important;
+    display: grid !important;
+    grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .categoryGrid button {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    aspect-ratio: .8 !important;
+  }
+
+  .categoryGrid img {
+    object-fit: cover !important;
+    object-position: center 92% !important;
+  }
+
+  .categoryGrid strong {
+    top: 14px !important;
+    font-size: clamp(10px,2.9vw,15px) !important;
+    letter-spacing: clamp(1px,.6vw,3px) !important;
+    line-height: 1.1;
+  }
+
+  .categoryGrid span {
+    top: 39px !important;
+    font-size: 8px !important;
+  }
+
+  .products {
+    width: 100% !important;
+    padding: 28px 7px 60px !important;
+  }
+
+  .productsGrid {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .productCard {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .productImg {
+    width: 100%;
+    height: auto !important;
+    aspect-ratio: .7 !important;
+  }
+
+  .productImg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover !important;
+    object-position: center 94% !important;
+  }
+
+  .productCardText {
+    padding: 9px 7px !important;
+  }
+
+  .productCardText > small {
+    font-size: 8px !important;
+  }
+
+  .productCardText h3 {
+    margin: 6px 0 !important;
+    min-height: 36px !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+
+  .priceArea {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 2px !important;
+  }
+
+  .priceArea del {
+    font-size: 8px !important;
+    margin: 0 !important;
+  }
+
+  .priceArea strong {
+    font-size: 12px !important;
+  }
+
+  .stockAvailable,
+  .stockOut {
+    font-size: 7px !important;
+  }
+
+  .productCardText button {
+    margin-top: 8px !important;
+    padding: 8px 2px !important;
+    font-size: 7px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .headerSocial {
+    display: none !important;
+  }
+
+  .heroBanner,
+  .heroTop,
+  .heroBottom {
+    height: 365px !important;
+  }
+
+  .categoryGrid,
+  .products {
+    padding-inline: 5px !important;
+  }
+
+  .categoryGrid,
+  .productsGrid {
+    gap: 5px !important;
+  }
+
+  .productCardText h3 {
+    font-size: 9px !important;
+  }
+
+  .priceArea strong {
+    font-size: 11px !important;
+  }
+}
+
+/* SHELIVA_MOBILE_REFERENCE_V4_END */
