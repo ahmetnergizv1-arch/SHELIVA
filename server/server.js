@@ -3,7 +3,6 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
 import { fileURLToPath } from "url";
 
 const app=express(); const PORT=Number(process.env.PORT || 10000);
@@ -57,21 +56,6 @@ function normalizeEmail(value=""){
   return String(value||"").trim().toLowerCase();
 }
 
-function mailTransport(){
-  const user=String(process.env.GMAIL_USER||"").trim();
-  const pass=String(process.env.GMAIL_APP_PASSWORD||"").replace(/\s/g,"");
-
-  if(!user||!pass) return null;
-
-  return nodemailer.createTransport({
-    service:"gmail",
-    auth:{user,pass},
-    connectionTimeout:15000,
-    greetingTimeout:10000,
-    socketTimeout:20000
-  });
-}
-
 function emailShell({title,preheader="",body,code=""}){
   return `<!doctype html>
 <html lang="tr">
@@ -112,36 +96,62 @@ Bu işlemi siz yapmadıysanız bu e-postayı dikkate almayabilirsiniz.<br>
 }
 
 async function sendMail({to,subject,title,body,code=""}){
-  const transport=mailTransport();
-  const from=String(process.env.GMAIL_USER||"").trim();
+  const apiKey=String(process.env.RESEND_API_KEY||"").trim();
+  const from=String(process.env.RESEND_FROM||"SHELİVA <onboarding@resend.dev>").trim();
 
-  if(!transport){
-    console.warn("MAIL PASIF: GMAIL_USER veya GMAIL_APP_PASSWORD eksik.");
+  if(!apiKey){
+    console.warn("MAIL PASIF: RESEND_API_KEY eksik.");
     return {ok:false,disabled:true};
   }
 
   if(!to) return {ok:false};
 
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),20000);
+
   try{
-    const result=await transport.sendMail({
-      from:`SHELİVA <${from}>`,
-      to,
-      subject,
-      html:emailShell({
-        title,
-        preheader:subject,
-        body,
-        code
-      })
+    const response=await fetch("https://api.resend.com/emails",{
+      method:"POST",
+      headers:{
+        "Authorization":`Bearer ${apiKey}`,
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        from,
+        to:[to],
+        subject,
+        html:emailShell({
+          title,
+          preheader:subject,
+          body,
+          code
+        })
+      }),
+      signal:controller.signal
     });
 
-    return {ok:true,id:result.messageId};
+    const data=await response.json().catch(()=>({}));
+
+    if(!response.ok){
+      console.error("RESEND MAIL HATASI:",response.status,data);
+      return {
+        ok:false,
+        error:data?.message||data?.name||`Resend HTTP ${response.status}`
+      };
+    }
+
+    return {ok:true,id:data?.id||""};
   }catch(error){
-    console.error("MAIL HATASI:",error?.message||error);
-    return {ok:false,error:error?.message||"Mail gönderilemedi."};
+    const message=error?.name==="AbortError"
+      ? "Resend istegi zaman asimina ugradi."
+      : (error?.message||"Mail gonderilemedi.");
+
+    console.error("RESEND MAIL HATASI:",message);
+    return {ok:false,error:message};
+  }finally{
+    clearTimeout(timeout);
   }
 }
-
 function createEmailCode(email,purpose){
   const list=read(F.otp,[])
     .filter(x=>new Date(x.expiresAt).getTime()>Date.now())
