@@ -65,7 +65,10 @@ function mailTransport(){
 
   return nodemailer.createTransport({
     service:"gmail",
-    auth:{user,pass}
+    auth:{user,pass},
+    connectionTimeout:15000,
+    greetingTimeout:10000,
+    socketTimeout:20000
   });
 }
 
@@ -341,13 +344,13 @@ app.post("/api/auth/email/request-code",async(q,r)=>{
 });
 
 app.post("/api/auth/register-email",async(q,r)=>{
-  const p=phone(q.body.phone);
+  const p=phone(q.body.phone||"");
   const email=normalizeEmail(q.body.email);
   const name=String(q.body.name||"").trim();
   const pw=String(q.body.password||"");
   const code=String(q.body.code||"").trim();
 
-  if(!name||p.length<10||!email||pw.length<6){
+  if(!name||!email||pw.length<6){
     return r.status(400).json({error:"Bilgileri kontrol edin. Şifre en az 6 karakter olmalıdır."});
   }
 
@@ -357,14 +360,14 @@ app.post("/api/auth/register-email",async(q,r)=>{
 
   const users=read(F.users,[]);
 
-  if(users.some(u=>u.phone===p||u.email===email)){
+  if(users.some(u=>(p&&u.phone===p)||u.email===email)){
     return r.status(409).json({error:"Telefon veya e-posta zaten kayıtlı."});
   }
 
   const u={
     id:nextId(users),
     name,
-    phone:p,
+    phone:p||"",
     email,
     passwordHash:hash(pw),
     verified:true,

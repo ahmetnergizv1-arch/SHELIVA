@@ -749,12 +749,6 @@ export default function App() {
   async function placeOrder(event) {
     event.preventDefault();
 
-    if(!authToken || !authUser){
-      setAuthMode("login");
-      setAuthOpen(true);
-      showToast("Sipariş için hesap gerekli","Giriş yaptıktan sonra sepetin korunacak.","error");
-      return;
-    }
 
     const approved=window.confirm(
       "Sipariş talebini oluşturmak istiyor musunuz?\n\n"+
@@ -863,7 +857,6 @@ export default function App() {
     if(!registerCodeSent){
       const draft={
         name:String(form.get("name")||"").trim(),
-        phone:String(form.get("phone")||"").trim(),
         email:String(form.get("email")||"").trim().toLowerCase(),
         password:String(form.get("password")||"")
       };
@@ -871,11 +864,26 @@ export default function App() {
       setAuthBusy(true);
 
       try{
-        const res=await fetch(`${API}/api/auth/email/request-code`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({email:draft.email,purpose:"register"})
-        });
+        const controller=new AbortController();
+        const timeout=setTimeout(()=>controller.abort(),25000);
+
+        let res;
+        try{
+          res=await fetch(`${API}/api/auth/email/request-code`,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({email:draft.email,purpose:"register"}),
+            signal:controller.signal
+          });
+        }catch(error){
+          if(error?.name==="AbortError"){
+            alert("Mail sunucusu geç cevap verdi. Lütfen 30 saniye sonra tekrar deneyin.");
+            return;
+          }
+          throw error;
+        }finally{
+          clearTimeout(timeout);
+        }
 
         const data=await res.json();
 
@@ -1713,7 +1721,7 @@ export default function App() {
 
             {authMode==="login" ? (
               <form className="authForm" onSubmit={loginUser}>
-                <label>Telefon veya E-posta<input name="login" required placeholder="05xx... veya e-posta"/></label>
+                <label>E-posta<input name="login" type="email" required placeholder="mail@ornek.com"/></label>
                 <label>Şifre<input name="password" type="password" required placeholder="Şifren"/></label>
                                 <button disabled={authBusy}>{authBusy ? "BEKLEYİN..." : "GİRİŞ YAP"}</button>
                 <button
@@ -1747,7 +1755,6 @@ export default function App() {
               !registerCodeSent ? (
                 <form className="authForm" onSubmit={registerUser}>
                   <label>Ad Soyad<input name="name" required placeholder="Ad Soyad" defaultValue={savedAddress?.name || authUser?.name || ""}/></label>
-                  <label>Telefon<input name="phone" required placeholder="05xx xxx xx xx"/></label>
                   <label>E-posta<input name="email" type="email" required placeholder="mail@ornek.com"/></label>
                   <label>Şifre<input name="password" type="password" required minLength="6" placeholder="En az 6 karakter"/></label>
                   <div className="verifyLater">Hesabınız açılmadan önce e-posta adresinize 6 haneli doğrulama kodu gönderilir.</div>
@@ -2249,10 +2256,10 @@ export default function App() {
                 {!authUser && (
                   <div className="guestCheckoutInfo">
                     <div>
-                      <b>Sipariş oluşturmak için giriş yapmalısın.</b>
-                      <span>Böylece sipariş durumunu ve kargo takip kodunu hesabından görebilirsin.</span>
+                      <b>Üye olmadan sipariş verebilirsiniz.</b>
+                      <span>Üyelik zorunlu değildir. Üye olursanız sipariş geçmişinizi ve kargo bilgilerinizi hesabınızdan takip edebilirsiniz.</span>
                     </div>
-                    <button type="button" onClick={()=>setAuthOpen(true)}>ÜYE OL / GİRİŞ YAP</button>
+                    <button type="button" onClick={()=>setAuthOpen(true)}>İSTEĞE BAĞLI ÜYE OL / GİRİŞ YAP</button>
                   </div>
                 )}
 
