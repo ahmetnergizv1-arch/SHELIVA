@@ -20,100 +20,7 @@ function imageUrl(path) {
     : path;
 }
 
-function totalStock(product) {
-  // SHELIVA_DYNAMIC_CATEGORY_IMAGES_V1
-  useEffect(()=>{
-    if(!products?.length) return;
-
-    const normalize=value=>
-      String(value||"")
-        .toLocaleUpperCase("tr-TR")
-        .replace(/\s+/g," ")
-        .trim();
-
-    const productImage=product=>{
-      const raw=
-        product?.colors?.[0]?.images?.[0] ||
-        product?.colors?.[0]?.image ||
-        product?.image ||
-        "";
-
-      if(!raw) return "";
-      return raw.startsWith("http") ? raw : `${API}${raw}`;
-    };
-
-    const pickProduct=list=>{
-      const available=(list||[]).filter(product=>productImage(product));
-      if(!available.length) return null;
-
-      const bestSeller=[...available]
-        .sort((a,b)=>Number(b.totalSold||0)-Number(a.totalSold||0))[0];
-
-      if(Number(bestSeller?.totalSold||0)>0) return bestSeller;
-
-      return [...available]
-        .sort((a,b)=>
-          Number(b.salePrice||b.price||0)-
-          Number(a.salePrice||a.price||0)
-        )[0];
-    };
-
-    const newest=[...products].sort((a,b)=>
-      new Date(b.createdAt||0)-new Date(a.createdAt||0)
-    );
-
-    const groups={
-      "KIŞLIK":products.filter(p=>
-        normalize(p.category).includes("KIŞ")
-      ),
-      "YAZLIK":products.filter(p=>
-        normalize(p.category).includes("YAZ")
-      ),
-      "İNDİRİMDE":products.filter(p=>
-        Number(p.discount||0)>0
-      ),
-      "TÜM ÜRÜNLER":products,
-      "SON GELENLER":newest.filter(p=>p.newest!==false)
-    };
-
-    const headings=[
-      ...document.querySelectorAll(
-        "h1,h2,h3,h4,h5,strong,span,p"
-      )
-    ];
-
-    for(const [title,list] of Object.entries(groups)){
-      const heading=headings.find(node=>
-        normalize(node.textContent)===title
-      );
-
-      if(!heading) continue;
-
-      const card=
-        heading.closest(
-          "a,button,article,section,[class*='card'],[class*='category'],div"
-        );
-
-      const selected=pickProduct(list);
-      const src=productImage(selected);
-
-      if(!card||!src) continue;
-
-      const img=card.querySelector("img");
-
-      if(img){
-        img.src=src;
-        img.alt=selected?.name||title;
-        img.style.objectFit="cover";
-      }else{
-        card.style.backgroundImage=
-          `linear-gradient(rgba(0,0,0,.34),rgba(0,0,0,.34)),url("${src}")`;
-        card.style.backgroundSize="cover";
-        card.style.backgroundPosition="center";
-      }
-    }
-  },[products]);
-  return (product.colors || []).reduce(
+function totalStock(product) {return (product.colors || []).reduce(
     (sum,color) =>
       sum +
       Object.values(color.sizes || {})
@@ -240,6 +147,100 @@ export default function App() {
   const [reviewRating,setReviewRating]=useState(5);
   const [reviewSent,setReviewSent]=useState(false);
 
+
+  // SHELIVA_DYNAMIC_CATEGORY_IMAGES_V1
+  useEffect(()=>{
+    if(!products?.length) return;
+
+    const normalize=value=>
+      String(value||"")
+        .toLocaleUpperCase("tr-TR")
+        .replace(/\s+/g," ")
+        .trim();
+
+    const productImage=product=>{
+      const raw=
+        product?.colors?.[0]?.images?.[0] ||
+        product?.colors?.[0]?.image ||
+        product?.image ||
+        "";
+
+      if(!raw) return "";
+      return raw.startsWith("http") ? raw : `${API}${raw}`;
+    };
+
+    const pickProduct=list=>{
+      const available=(list||[]).filter(product=>productImage(product));
+      if(!available.length) return null;
+
+      const bestSeller=[...available]
+        .sort((a,b)=>Number(b.totalSold||0)-Number(a.totalSold||0))[0];
+
+      if(Number(bestSeller?.totalSold||0)>0) return bestSeller;
+
+      return [...available]
+        .sort((a,b)=>
+          Number(b.salePrice||b.price||0)-
+          Number(a.salePrice||a.price||0)
+        )[0];
+    };
+
+    const newest=[...products].sort((a,b)=>
+      new Date(b.createdAt||0)-new Date(a.createdAt||0)
+    );
+
+    const groups={
+      "KIŞLIK":products.filter(p=>
+        normalize(p.category).includes("KIŞ")
+      ),
+      "YAZLIK":products.filter(p=>
+        normalize(p.category).includes("YAZ")
+      ),
+      "İNDİRİMDE":products.filter(p=>
+        Number(p.discount||0)>0
+      ),
+      "TÜM ÜRÜNLER":products,
+      "SON GELENLER":newest.filter(p=>p.newest!==false)
+    };
+
+    const headings=[
+      ...document.querySelectorAll(
+        "h1,h2,h3,h4,h5,strong,span,p"
+      )
+    ];
+
+    for(const [title,list] of Object.entries(groups)){
+      const heading=headings.find(node=>
+        normalize(node.textContent)===title
+      );
+
+      if(!heading) continue;
+
+      const card=
+        heading.closest(
+          "a,button,article,section,[class*='card'],[class*='category'],div"
+        );
+
+      const selected=pickProduct(list);
+      const src=productImage(selected);
+
+      if(!card||!src) continue;
+
+      const img=card.querySelector("img");
+
+      if(img){
+        img.src=src;
+        img.alt=selected?.name||title;
+        img.style.objectFit="cover";
+      }else{
+        card.style.backgroundImage=
+          `linear-gradient(rgba(0,0,0,.34),rgba(0,0,0,.34)),url("${src}")`;
+        card.style.backgroundSize="cover";
+        card.style.backgroundPosition="center";
+      }
+    }
+  },[products]);
+  
   async function refreshProducts() {
     try {
       const res =
@@ -2395,4 +2396,5 @@ export default function App() {
     </div>
   );
 }
+
 
