@@ -446,10 +446,7 @@ export default function App() {
     const definitions=[
       ["YAZLIK","Yazlık",products.filter(p=>p.category==="Yazlık")],
       ["KIŞLIK","Kışlık",products.filter(p=>p.category==="Kışlık")],
-      ["YENİ SEZON","Yeni Sezon",products.filter(p=>p.newest!==false)],
-      ["İNDİRİMDE","İndirimde",products.filter(p=>n(p.discount)>0)],
-      ["TÜM ÜRÜNLER","Tümü",products],
-      ["SON GELENLER","Son Gelenler",newest]
+      ["İNDİRİMDEKİLER","İndirimde",products.filter(p=>n(p.discount)>0)]
     ];
 
     return definitions
