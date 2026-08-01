@@ -3047,181 +3047,128 @@ a {
 }
 /* SHELIVA_MOBILE_PRODUCT_GALLERY_V5_END */
 
-/* SHELIVA_ACCOUNT_FIXED_LAYOUT_V3_START */
+/* SHELIVA_PC_ACCOUNT_ORDERS_V4_START */
 
-html,
-body,
-#root,
-.site{
-  max-width:100%;
-  overflow-x:hidden!important;
-}
-
-.authOverlay,
-.accountOverlay,
-.accountPanel,
-.accountPanel *,
-.authModal,
-.authModal *{
-  box-sizing:border-box;
-  min-width:0;
-}
-
-.accountOverlay{
-  overflow:hidden!important;
-}
-
-.accountPanel{
-  width:min(760px,calc(100vw - 24px))!important;
-  max-width:calc(100vw - 24px)!important;
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
-  overscroll-behavior-x:none;
-}
-
-.accountPanel > *,
-.accountPanel section,
-.accountPanel article,
-.accountPanel div{
-  max-width:100%;
-}
-
-.accountPanel section:has(.accountOrderTabs){
-  width:100%!important;
-  display:grid!important;
-  grid-template-columns:120px minmax(0,1fr) auto!important;
-  grid-template-areas:
-    "title tabs close"
-    "content content content"!important;
-  align-items:center!important;
-  column-gap:14px!important;
-  row-gap:14px!important;
-  padding:18px!important;
-  overflow:hidden!important;
-}
-
-.accountPanel section:has(.accountOrderTabs) > h1,
-.accountPanel section:has(.accountOrderTabs) > h2,
-.accountPanel section:has(.accountOrderTabs) > h3,
-.accountPanel section:has(.accountOrderTabs) > strong:first-child{
-  grid-area:title!important;
-  margin:0!important;
-  line-height:1.15!important;
-}
-
-.accountPanel section:has(.accountOrderTabs) .accountOrderTabs{
-  grid-area:tabs!important;
-  width:100%!important;
-  min-width:0!important;
-  margin:0!important;
-  padding:0!important;
-  position:static!important;
-  display:grid!important;
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  gap:8px!important;
-}
-
-.accountPanel section:has(.accountOrderTabs) > button{
-  grid-area:close!important;
-  justify-self:end!important;
-}
-
-.accountPanel section:has(.accountOrderTabs) .accountOrdersEmpty,
-.accountPanel section:has(.accountOrderTabs) .accountOrdersSkeleton,
-.accountPanel section:has(.accountOrderTabs) .ordersAccountCard,
-.accountPanel section:has(.accountOrderTabs) [class*="orderCard"],
-.accountPanel section:has(.accountOrderTabs) [class*="accountOrder"]{
-  grid-area:content!important;
-  width:100%!important;
-  max-width:100%!important;
-}
-
-.accountOrderTabs button{
-  width:100%!important;
-  min-width:0!important;
-  white-space:normal!important;
-  text-align:center!important;
-}
-
-.accountOrdersEmpty,
-.accountOrdersSkeleton{
-  width:100%!important;
-  min-height:94px!important;
-  margin:0!important;
-  padding:20px!important;
-}
-
-.accountPanel,
-.accountPanel section,
-.accountPanel .accountOrderTabs,
-.accountPanel .ordersAccountCard{
-  scrollbar-width:thin;
-}
-
-.accountPanel::-webkit-scrollbar{
-  width:7px;
-}
-
-.accountPanel::-webkit-scrollbar:horizontal,
-.accountPanel *::-webkit-scrollbar:horizontal{
-  display:none!important;
-  height:0!important;
-}
-
-@media(max-width:760px){
-  .accountPanel{
-    width:calc(100vw - 12px)!important;
-    max-width:calc(100vw - 12px)!important;
-    margin:6px!important;
-    border-radius:12px!important;
+/* Yalnizca masaustu / laptop */
+@media (min-width: 761px) {
+  html,
+  body,
+  #root,
+  .site {
+    overflow-x: hidden !important;
   }
 
-  .accountPanel section:has(.accountOrderTabs){
-    grid-template-columns:130px minmax(0,1fr) auto!important;
-    column-gap:8px!important;
-    padding:16px!important;
+  .accountOverlay {
+    overflow: hidden !important;
   }
 
-  .accountPanel section:has(.accountOrderTabs) > h1,
-  .accountPanel section:has(.accountOrderTabs) > h2,
-  .accountPanel section:has(.accountOrderTabs) > h3,
-  .accountPanel section:has(.accountOrderTabs) > strong:first-child{
-    font-size:18px!important;
+  .accountPanel {
+    width: min(920px, calc(100vw - 60px)) !important;
+    max-width: min(920px, calc(100vw - 60px)) !important;
+    max-height: calc(100vh - 40px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
   }
 
-  .accountOrderTabs{
-    background:transparent!important;
+  .accountPanel,
+  .accountPanel * {
+    box-sizing: border-box;
+    min-width: 0;
   }
 
-  .accountOrderTabs button{
-    min-height:58px!important;
-    padding:8px 4px!important;
-    font-size:8px!important;
+  .ordersAccountCard {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    padding: 22px !important;
+    overflow: hidden !important;
   }
 
-  .accountOrdersEmpty,
-  .accountOrdersSkeleton{
-    min-height:100px!important;
+  .ordersAccountCard .accountCardTitle {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 150px minmax(320px, 1fr) auto !important;
+    align-items: center !important;
+    gap: 16px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .ordersAccountCard .accountCardTitle > b {
+    margin: 0 !important;
+    font-size: 18px !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+  }
+
+  .ordersAccountCard .accountOrderTabs {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    background: transparent !important;
+  }
+
+  .ordersAccountCard .accountOrderTabs button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    padding: 10px 14px !important;
+    white-space: normal !important;
+    text-align: center !important;
+    font-size: 10px !important;
+  }
+
+  .ordersAccountCard .accountCardTitle > button {
+    justify-self: end !important;
+    margin: 0 !important;
+  }
+
+  .ordersAccountCard .accountOrdersEmpty,
+  .ordersAccountCard .accountOrdersSkeleton {
+    width: 100% !important;
+    min-height: 110px !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    overflow: hidden !important;
+  }
+
+  .ordersAccountCard .myOrdersList,
+  .ordersAccountCard .ordersList {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    overflow: visible !important;
+  }
+
+  .ordersAccountCard .myOrderCard,
+  .ordersAccountCard .ordersAccountCard,
+  .ordersAccountCard [class*="orderCard"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: hidden !important;
+  }
+
+  .accountPanel::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .accountPanel::-webkit-scrollbar:horizontal,
+  .accountPanel *::-webkit-scrollbar:horizontal {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
   }
 }
 
-@media(max-width:470px){
-  .accountPanel section:has(.accountOrderTabs){
-    grid-template-columns:115px minmax(0,1fr) auto!important;
-    padding:14px 12px!important;
-    gap:7px!important;
-  }
-
-  .accountPanel section:has(.accountOrderTabs) > h1,
-  .accountPanel section:has(.accountOrderTabs) > h2,
-  .accountPanel section:has(.accountOrderTabs) > h3,
-  .accountPanel section:has(.accountOrderTabs) > strong:first-child{
-    font-size:16px!important;
-  }
-
-  .accountOrderTabs button{
-    font-size:7px!important;
-  }
-}
-
-/* SHELIVA_ACCOUNT_FIXED_LAYOUT_V3_END */
+/* SHELIVA_PC_ACCOUNT_ORDERS_V4_END */
