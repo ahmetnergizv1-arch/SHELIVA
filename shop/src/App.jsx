@@ -573,11 +573,11 @@ export default function App() {
 
   function addToCart() {
     if (!selectedColor) {
-      return alert("Renk seç.");
+      return showToast("Renk seç.");
     }
 
     if (!selectedSize) {
-      return alert("Numara seç.");
+      return showToast("Numara seç.");
     }
 
     const stock =
@@ -587,7 +587,7 @@ export default function App() {
       );
 
     if (stock<=0) {
-      return alert(
+      return showToast(
         "Bu numara tükendi."
       );
     }
@@ -810,7 +810,7 @@ export default function App() {
       await res.json();
 
     if (!res.ok) {
-      return alert(
+      return showToast(
         data.error ||
         "Sipariş oluşturulamadı."
       );
@@ -843,7 +843,7 @@ export default function App() {
       body:JSON.stringify({login:form.get("login"),password:form.get("password")})
     });
     const data=await res.json();
-    if(!res.ok)return alert(data.error||"Giriş yapılamadı.");
+    if(!res.ok)return showToast(data.error||"Giriş yapılamadı.");
     localStorage.setItem("sheliva-token",data.token);
     setAuthToken(data.token);setAuthUser(data.user);setAuthOpen(false);
   }
@@ -877,7 +877,7 @@ export default function App() {
           });
         }catch(error){
           if(error?.name==="AbortError"){
-            alert("Mail sunucusu geç cevap verdi. Lütfen 30 saniye sonra tekrar deneyin.");
+            showToast("Mail sunucusu geç cevap verdi. Lütfen 30 saniye sonra tekrar deneyin.");
             return;
           }
           throw error;
@@ -887,11 +887,11 @@ export default function App() {
 
         const data=await res.json();
 
-        if(!res.ok) return alert(data.error||"Kod gönderilemedi.");
+        if(!res.ok) return showToast(data.error||"Kod gönderilemedi.");
 
         setRegisterDraft(draft);
         setRegisterCodeSent(true);
-        alert("6 haneli doğrulama kodu e-posta adresinize gönderildi.");
+        showToast("6 haneli doğrulama kodu e-posta adresinize gönderildi.");
       }finally{
         setAuthBusy(false);
       }
@@ -913,7 +913,7 @@ export default function App() {
 
       const data=await res.json();
 
-      if(!res.ok) return alert(data.error||"Hesap oluşturulamadı.");
+      if(!res.ok) return showToast(data.error||"Hesap oluşturulamadı.");
 
       localStorage.setItem("sheliva-token",data.token);
       setAuthToken(data.token);
@@ -922,7 +922,7 @@ export default function App() {
       setRegisterCodeSent(false);
       setRegisterDraft(null);
       setRegisterCode("");
-      alert("E-posta adresiniz doğrulandı. SHELİVA hesabınız oluşturuldu.");
+      showToast("E-posta adresiniz doğrulandı. SHELİVA hesabınız oluşturuldu.");
     }finally{
       setAuthBusy(false);
     }
@@ -946,11 +946,11 @@ export default function App() {
 
       const data=await res.json();
 
-      if(!res.ok) return alert(data.error||"Kod gönderilemedi.");
+      if(!res.ok) return showToast(data.error||"Kod gönderilemedi.");
 
       setResetEmail(email);
       setResetStep("code");
-      alert("Şifre sıfırlama kodu e-posta adresinize gönderildi.");
+      showToast("Şifre sıfırlama kodu e-posta adresinize gönderildi.");
     }finally{
       setAuthBusy(false);
     }
@@ -977,9 +977,9 @@ export default function App() {
 
       const data=await res.json();
 
-      if(!res.ok) return alert(data.error||"Şifre değiştirilemedi.");
+      if(!res.ok) return showToast(data.error||"Şifre değiştirilemedi.");
 
-      alert("Şifreniz değiştirildi. Yeni şifrenizle giriş yapabilirsiniz.");
+      showToast("Şifreniz değiştirildi. Yeni şifrenizle giriş yapabilirsiniz.");
       setResetStep("email");
       setResetEmail("");
       setAuthMode("login");
