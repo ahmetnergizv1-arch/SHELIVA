@@ -87,6 +87,7 @@ export default function App() {
   const [myOrders,setMyOrders]=useState([]);
   const [myOrdersLoading,setMyOrdersLoading]=useState(false);
   const [ordersExpanded,setOrdersExpanded]=useState(false);
+  const [accountOrderFilter,setAccountOrderFilter]=useState("active");
   const [orderLightbox,setOrderLightbox]=useState(""); // SHELIVA_ORDER_LIGHTBOX_V2
 
   const [savedAddress,setSavedAddress]=useState(
@@ -485,7 +486,7 @@ export default function App() {
       return;
     }
 
-    setMyOrdersLoading(true);
+    if(!(myOrders||[]).length) setMyOrdersLoading(true);
     try{
       const res=await fetch(`${API}/api/account/orders`,{
         headers:{Authorization:`Bearer ${authToken}`}
@@ -1129,7 +1130,15 @@ export default function App() {
     localStorage.removeItem("sheliva-token");sessionStorage.removeItem("sheliva-token");setAuthToken("");setAuthUser(null);
   }
 
-  if (loading) {
+  
+  const visibleAccountOrders=(myOrders||[]).filter(order=>{
+    if(accountOrderFilter==="delivered"){
+      return order.status==="Teslim Edildi";
+    }
+
+    return !["Teslim Edildi","İptal"].includes(order.status);
+  });
+if (loading) {
     return (
       <div className="loading">
         SHELİVA
@@ -2105,6 +2114,31 @@ export default function App() {
               <section className="accountMenuCard ordersAccountCard">
                 <div className="accountCardTitle">
                   <b>SON SİPARİŞLERİM</b>
+                <div className="accountOrderTabs">
+                  <button
+                    type="button"
+                    className={accountOrderFilter==="active" ? "active" : ""}
+                    onClick={()=>setAccountOrderFilter("active")}
+                  >
+                    AKTİF SİPARİŞLER
+                    <b>{(myOrders||[]).filter(o=>!["Teslim Edildi","İptal"].includes(o.status)).length}</b>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={accountOrderFilter==="delivered" ? "active" : ""}
+                    onClick={()=>setAccountOrderFilter("delivered")}
+                  >
+                    TESLİM EDİLENLER
+                    <b>{(myOrders||[]).filter(o=>o.status==="Teslim Edildi").length}</b>
+                  </button>
+                </div>
+                {!myOrdersLoading && visibleAccountOrders.length===0 && (
+                  <div className="accountOrdersEmpty">
+                    <b>{accountOrderFilter==="active" ? "Aktif siparişiniz yok." : "Teslim edilen siparişiniz yok."}</b>
+                    <span>Siparişleriniz burada güvenli şekilde saklanır ve durum değişiklikleri otomatik görünür.</span>
+                  </div>
+                )}
                   <button
                     onClick={()=>{
                       const next=!ordersExpanded;
@@ -2127,7 +2161,7 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="myOrdersList">
-                    {myOrders.map(order=>(
+                    {visibleAccountOrders.map(order=>(
                       <article className="myOrderCard" key={order.id}>
                         <div className="myOrderHead">
                           <div>
