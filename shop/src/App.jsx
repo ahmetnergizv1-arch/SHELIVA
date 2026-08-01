@@ -86,6 +86,7 @@ export default function App() {
   const [accountOpen,setAccountOpen]=useState(false);
   const [myOrders,setMyOrders]=useState([]);
   const [myOrdersLoading,setMyOrdersLoading]=useState(false);
+  const [myOrdersLoadedOnce,setMyOrdersLoadedOnce]=useState(false);
   const [ordersExpanded,setOrdersExpanded]=useState(false);
   const [accountOrderFilter,setAccountOrderFilter]=useState("active");
   const [orderLightbox,setOrderLightbox]=useState(""); // SHELIVA_ORDER_LIGHTBOX_V2
@@ -493,8 +494,10 @@ export default function App() {
       });
       if(!res.ok) throw new Error();
       setMyOrders(await res.json());
+      setMyOrdersLoadedOnce(true);
     }catch{
       setMyOrders([]);
+      setMyOrdersLoadedOnce(true);
       showToast("Siparişler yüklenemedi","Tekrar giriş yapmayı dene.","error");
     }finally{
       setMyOrdersLoading(false);
