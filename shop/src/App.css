@@ -152,7 +152,7 @@ a {
 }
 
 .heroBottom .heroPhoto img {
-  object-position: center 63%;
+  object-position: center bottom;
 }
 
 .heroBlack {
@@ -3375,3 +3375,105 @@ a {
 }
 
 /* SHELIVA_REVIEW_TABS_ZOOM_V1_END */
+
+
+/* SHELIVA_PRODUCT_ZOOM_GALLERY_FINAL */
+.productZoomOverlay{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  background:rgba(0,0,0,.96);
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  padding:14px;
+}
+
+.productZoomToolbar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  min-height:52px;
+  color:#fff;
+}
+
+.productZoomToolbar button{
+  width:42px;
+  height:42px;
+  border:1px solid #3b3b3b;
+  background:#161616;
+  color:#fff;
+  border-radius:8px;
+  font-size:22px;
+}
+
+.productZoomToolbar span{
+  font-size:11px;
+  color:#bdbdbd;
+  margin:0 8px;
+}
+
+.productZoomStage{
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  cursor:zoom-in;
+}
+
+.productZoomStage>img{
+  display:block;
+  max-width:100%;
+  max-height:100%;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  transition:transform .12s ease;
+  transform-origin:center center;
+}
+
+.productZoomThumbs{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  overflow-x:auto;
+  padding:14px 6px 4px;
+  min-height:94px;
+}
+
+.productZoomThumbs button{
+  flex:0 0 70px;
+  width:70px;
+  height:82px;
+  padding:3px;
+  border:2px solid transparent;
+  border-radius:8px;
+  background:#171717;
+}
+
+.productZoomThumbs button.active{
+  border-color:#35a67f;
+}
+
+.productZoomThumbs img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:5px;
+}
+
+@media(max-width:650px){
+  .productZoomOverlay{padding:8px}
+  .productZoomToolbar span{display:none}
+  .productZoomThumbs{
+    justify-content:flex-start;
+    min-height:82px;
+  }
+  .productZoomThumbs button{
+    flex-basis:58px;
+    width:58px;
+    height:68px;
+  }
+}

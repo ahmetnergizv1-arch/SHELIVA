@@ -495,17 +495,19 @@ export default function App() {
 
     const click=event=>{
       const target=event.target.closest?.(
-        ".mainPhoto img,.mainPhotoV3 img"
+        ".productPage .mainPhoto img,.productPage .mainPhotoV3 img"
       );
 
       if(!target?.src) return;
 
       event.preventDefault();
 
+      const productRoot=target.closest(".productPage");
+
       const sources=[
-        ...document.querySelectorAll(
+        ...(productRoot?.querySelectorAll(
           ".thumbs img,.mainPhoto img,.mainPhotoV3 img"
-        )
+        )||[])
       ]
         .map(img=>img.src)
         .filter(Boolean);
@@ -645,15 +647,29 @@ export default function App() {
           n(a.totalSold)
       );
 
+  const stockedProducts =
+    [...products]
+      .filter(
+        product =>
+          totalStock(product)>0 &&
+          firstImage(product)
+      );
+
   const promoProduct =
-    discounted[0] ||
-    bestSellers[0] ||
-    products[0];
+    [...stockedProducts]
+      .sort(
+        (a,b) =>
+          salePrice(b) -
+          salePrice(a)
+      )[0] || null;
 
   const bestseller =
-    bestSellers[0] ||
-    discounted[0] ||
-    products[0];
+    [...stockedProducts]
+      .sort(
+        (a,b) =>
+          n(b.totalSold) -
+          n(a.totalSold)
+      )[0] || null;
 
   function pickCategoryProduct(list){
     const available=(list||[]).filter(p=>firstImage(p));
@@ -1466,16 +1482,15 @@ if (loading) {
       {page==="home" && (
         <main className="homeMain">
 
+          {promoProduct && (
           <section className="heroBanner heroTop">
 
             <div className="heroPhoto">
               <img
                 src={
-                  promoProduct
-                    ? imageUrl(
-                        firstImage(promoProduct)
-                      )
-                    : "/products/yazlik-2.png"
+                  imageUrl(
+                    firstImage(promoProduct)
+                  )
                 }
               />
             </div>
@@ -1483,20 +1498,14 @@ if (loading) {
             <div className="heroBlack">
 
               <h1>
-                {promoProduct
-                  ? n(promoProduct.discount)>0
-                    ? "İndirimde Öne Çıkan"
-                    : "Özelleştirilmiş Koleksiyon"
-                  : "Özelleştirilmiş Koleksiyon"}
+                Özelleştirilmiş Koleksiyon
               </h1>
 
               <b>BY SHELİVA</b>
               <i></i>
 
               <span>
-                {promoProduct
-                  ? promoProduct.name
-                  : "YAZ 2026"}
+                {promoProduct.name}
               </span>
 
               {promoProduct && (
@@ -1513,7 +1522,9 @@ if (loading) {
             </div>
 
           </section>
+          )}
 
+          {bestseller && (
           <section className="heroBanner heroBottom">
 
             <div className="heroBlack">
@@ -1524,9 +1535,7 @@ if (loading) {
               <i></i>
 
               <span>
-                {bestseller
-                  ? bestseller.name
-                  : "SUMMER COLLECTION"}
+                {bestseller.name}
               </span>
 
               {bestseller && (
@@ -1545,16 +1554,15 @@ if (loading) {
             <div className="heroPhoto">
               <img
                 src={
-                  bestseller
-                    ? imageUrl(
-                        firstImage(bestseller)
-                      )
-                    : "/products/yazlik-1.png"
+                  imageUrl(
+                    firstImage(bestseller)
+                  )
                 }
               />
             </div>
 
           </section>
+          )}
 
           {categoryCards.length>0 && (
             <section className="categoryGrid">
