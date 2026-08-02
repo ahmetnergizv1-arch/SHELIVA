@@ -99,6 +99,81 @@ function calculate(product) {
   };
 }
 
+// SHELIVA_PRODUCT_IMAGE_OPTIMIZER_SAFE_V1
+async function optimizeDataImage(dataUrl){
+  if(typeof dataUrl!=="string"||!dataUrl.startsWith("data:image/")){
+    return dataUrl;
+  }
+
+  return new Promise(resolve=>{
+    const image=new Image();
+
+    image.onload=()=>{
+      try{
+        const maxSide=1400;
+        const ratio=Math.min(
+          1,
+          maxSide/Math.max(image.naturalWidth,image.naturalHeight)
+        );
+
+        const width=Math.max(1,Math.round(image.naturalWidth*ratio));
+        const height=Math.max(1,Math.round(image.naturalHeight*ratio));
+
+        const canvas=document.createElement("canvas");
+        canvas.width=width;
+        canvas.height=height;
+
+        const context=canvas.getContext("2d",{alpha:false});
+        context.imageSmoothingEnabled=true;
+        context.imageSmoothingQuality="high";
+        context.fillStyle="#ffffff";
+        context.fillRect(0,0,width,height);
+        context.drawImage(image,0,0,width,height);
+
+        resolve(canvas.toDataURL("image/webp",0.76));
+      }catch{
+        resolve(dataUrl);
+      }
+    };
+
+    image.onerror=()=>resolve(dataUrl);
+    image.src=dataUrl;
+  });
+}
+
+async function optimizeProductImages(product){
+  const clone=JSON.parse(JSON.stringify(product));
+
+  for(const color of clone.colors||[]){
+    const optimized=[];
+
+    for(const image of color.images||[]){
+      if(typeof image==="string"){
+        optimized.push(await optimizeDataImage(image));
+      }else if(image?.data){
+        optimized.push({
+          ...image,
+          data:await optimizeDataImage(image.data)
+        });
+      }else{
+        optimized.push(image);
+      }
+    }
+
+    color.images=optimized;
+
+    if(typeof color.image==="string"){
+      color.image=await optimizeDataImage(color.image);
+    }
+  }
+
+  if(typeof clone.image==="string"){
+    clone.image=await optimizeDataImage(clone.image);
+  }
+
+  return clone;
+}
+
 export default function App() {
   // SHELIVA_ADMIN_LOGIN_V1
   const [adminToken,setAdminToken]=useState(
@@ -430,7 +505,7 @@ export default function App() {
       const res=await adminFetch(url,{
         method:exists ? "PUT" : "POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(editing)
+        body:JSON.stringify(await optimizeProductImages(editing))
       });
 
       const data=await res.json().catch(()=>({}));
