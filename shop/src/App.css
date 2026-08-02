@@ -3081,119 +3081,151 @@ a {
 }
 /* SHELIVA_PC_ACCOUNT_MIN_GROW_V6_END */
 
-/* SHELIVA_MOBILE_CART_MINI_V2_START */
+/* SHELIVA_MOBILE_ACCOUNT_COMPACT_V1_START */
 @media (max-width: 760px) {
-  .sideDrawer:not(.checkoutMode) {
-    width: 72vw !important;
-    max-width: 300px !important;
+  .accountOverlay {
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+
+  .accountPanel {
+    width: 88vw !important;
+    max-width: 390px !important;
     min-width: 0 !important;
     height: 88dvh !important;
     max-height: 88dvh !important;
     top: 6dvh !important;
-    right: 5px !important;
+    right: 2vw !important;
+    left: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     border-radius: 14px 0 0 14px !important;
-    overflow-x: hidden !important;
   }
 
-  .sideDrawer:not(.checkoutMode) .drawerHead {
-    min-height: 44px !important;
-    padding: 8px 10px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerHead h2,
-  .sideDrawer:not(.checkoutMode) .drawerHead strong {
-    font-size: 13px !important;
-    line-height: 1.1 !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerHead button {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    padding: 0 !important;
-    font-size: 17px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerBody {
-    padding: 7px 8px !important;
-    gap: 6px !important;
-    overflow-x: hidden !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerItem {
-    grid-template-columns: 46px minmax(0,1fr) auto !important;
-    gap: 6px !important;
-    padding: 6px !important;
-    border-radius: 8px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerItem img {
-    width: 46px !important;
-    height: 55px !important;
-    object-fit: cover !important;
-    object-position: center bottom !important;
-    border-radius: 5px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerItem h3,
-  .sideDrawer:not(.checkoutMode) .drawerItem b {
-    margin: 0 0 2px !important;
-    font-size: 9px !important;
-    line-height: 1.15 !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerItem p,
-  .sideDrawer:not(.checkoutMode) .drawerItem span,
-  .sideDrawer:not(.checkoutMode) .drawerItem small {
-    font-size: 6.5px !important;
-    line-height: 1.25 !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .qtyControl,
-  .sideDrawer:not(.checkoutMode) [class*="qty"] {
-    gap: 3px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .qtyControl button,
-  .sideDrawer:not(.checkoutMode) [class*="qty"] button {
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-    padding: 0 !important;
-    font-size: 9px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerBottom {
-    padding: 7px 9px 9px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerTotal {
-    padding: 5px 0 !important;
-    font-size: 9px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .drawerBottom > button {
-    min-height: 34px !important;
-    padding: 7px !important;
-    font-size: 8px !important;
-    border-radius: 7px !important;
-  }
-
-  .sideDrawer:not(.checkoutMode) .freeShippingCartNotice {
-    margin: 0 0 5px !important;
-    padding: 6px 7px !important;
-    font-size: 6.5px !important;
-    line-height: 1.3 !important;
-  }
-
-  .sideDrawer:not(.checkoutMode),
-  .sideDrawer:not(.checkoutMode) * {
+  .accountPanel,
+  .accountPanel * {
     box-sizing: border-box !important;
     min-width: 0 !important;
   }
 
-  .sideDrawer:not(.checkoutMode)::-webkit-scrollbar:horizontal,
-  .sideDrawer:not(.checkoutMode) *::-webkit-scrollbar:horizontal {
+  .accountPanel > *,
+  .accountPanel section,
+  .accountPanel article,
+  .accountPanel div {
+    width: auto !important;
+    max-width: 100% !important;
+  }
+
+  .accountHeader,
+  .accountPanel > header {
+    padding: 18px 18px 16px !important;
+  }
+
+  .accountHeader h1,
+  .accountPanel > header h1 {
+    font-size: 28px !important;
+    line-height: 1.05 !important;
+    margin: 6px 0 !important;
+  }
+
+  .accountHeader small,
+  .accountPanel > header small {
+    font-size: 11px !important;
+  }
+
+  .accountContent,
+  .accountPanel main {
+    padding: 10px 12px 14px !important;
+    overflow-x: hidden !important;
+  }
+
+  .accountPanel section,
+  .accountPanel article,
+  .accountCard,
+  .ordersAccountCard {
+    padding: 14px !important;
+    margin: 0 0 10px !important;
+    border-radius: 11px !important;
+    overflow: hidden !important;
+  }
+
+  .accountPanel h2,
+  .accountPanel h3,
+  .accountPanel strong {
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .accountPanel h2,
+  .accountPanel h3 {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+
+  .accountPanel p,
+  .accountPanel span,
+  .accountPanel b,
+  .accountPanel small {
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  .accountPanel p,
+  .accountPanel span {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+
+  .accountOrderTabs {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    gap: 7px !important;
+    margin: 10px 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    overflow: hidden !important;
+  }
+
+  .accountOrderTabs button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    padding: 7px 5px !important;
+    font-size: 8px !important;
+    white-space: normal !important;
+  }
+
+  .accountOrdersEmpty,
+  .accountOrdersSkeleton,
+  .myOrdersList,
+  .myOrderCard {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: hidden !important;
+  }
+
+  .accountOrdersEmpty,
+  .accountOrdersSkeleton {
+    padding: 14px !important;
+  }
+
+  .accountFooter {
+    padding: 10px 12px 12px !important;
+  }
+
+  .logoutButton {
+    min-height: 44px !important;
+    padding: 10px !important;
+    font-size: 12px !important;
+  }
+
+  .accountPanel::-webkit-scrollbar:horizontal,
+  .accountPanel *::-webkit-scrollbar:horizontal {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
@@ -3201,18 +3233,21 @@ a {
 }
 
 @media (max-width: 390px) {
-  .sideDrawer:not(.checkoutMode) {
-    width: 70vw !important;
-    max-width: 275px !important;
+  .accountPanel {
+    width: 86vw !important;
+    max-width: 350px !important;
   }
 
-  .sideDrawer:not(.checkoutMode) .drawerItem {
-    grid-template-columns: 42px minmax(0,1fr) auto !important;
+  .accountHeader h1,
+  .accountPanel > header h1 {
+    font-size: 25px !important;
   }
 
-  .sideDrawer:not(.checkoutMode) .drawerItem img {
-    width: 42px !important;
-    height: 50px !important;
+  .accountPanel section,
+  .accountPanel article,
+  .accountCard,
+  .ordersAccountCard {
+    padding: 12px !important;
   }
 }
-/* SHELIVA_MOBILE_CART_MINI_V2_END */
+/* SHELIVA_MOBILE_ACCOUNT_COMPACT_V1_END */
