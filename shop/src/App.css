@@ -3479,41 +3479,110 @@ a {
 }
 
 
-/* SHELIVA_BESTSELLER_BOTTOM_LOCK */
-.heroBanner.heroBottom .heroPhoto > img {
+
+
+
+/* SHELIVA_HERO_ONLY_FIX_START */
+
+.homeMain .heroBanner{
+  width:100% !important;
+  height:560px !important;
+  min-height:560px !important;
+  display:grid !important;
+  overflow:hidden !important;
+  background:#030303 !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+
+.homeMain .heroBanner.heroTop{
+  grid-template-columns:70% 30% !important;
+}
+
+.homeMain .heroBanner.heroBottom{
+  grid-template-columns:30% 70% !important;
+}
+
+.homeMain .heroBanner .heroPhoto{
+  position:relative !important;
+  width:100% !important;
+  height:560px !important;
+  min-height:560px !important;
+  overflow:hidden !important;
+  background:#111 !important;
+  padding:0 !important;
+  margin:0 !important;
+}
+
+.homeMain .heroBanner .heroPhoto > img{
+  display:block !important;
   width:100% !important;
   height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
   object-fit:cover !important;
-  object-position:center bottom !important;
+  transform:none !important;
+  margin:0 !important;
+  padding:0 !important;
 }
-/* SHELIVA_BESTSELLER_BOTTOM_LOCK_END */
-/* SHELIVA_HERO_MODEL_MORE_VISIBLE_START */
-@media (min-width:1100px){
 
-  .heroBanner{
-    height:560px !important;
-  }
+/* Üst blok: model ve ayakkabı dengeli görünsün */
+.homeMain .heroBanner.heroTop .heroPhoto > img{
+  object-position:center 74% !important;
+}
 
-  .heroPhoto{
-    overflow:hidden !important;
-    background:#111 !important;
-  }
+/* Alt blok: üst taraf daha çok kesilsin, alt taraf daha çok görünsün */
+.homeMain .heroBanner.heroBottom .heroPhoto > img{
+  object-position:center 84% !important;
+}
 
-  .heroTop .heroPhoto > img,
-  .heroBottom .heroPhoto > img{
-    width:100% !important;
-    height:100% !important;
-    object-fit:cover !important;
-    transform:scale(.88) !important;
-    transform-origin:center center !important;
-  }
+/* Üst blok sağa doğru siyaha geçiş */
+.homeMain .heroBanner.heroTop .heroPhoto::after{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  z-index:2 !important;
+  pointer-events:none !important;
+  background:linear-gradient(
+    90deg,
+    transparent 58%,
+    rgba(3,3,3,.18) 68%,
+    rgba(3,3,3,.58) 82%,
+    #030303 100%
+  ) !important;
+}
 
-  .heroTop .heroPhoto > img{
-    object-position:center 72% !important;
-  }
+/* Alt blok soldan sağa fotoğrafa geçiş */
+.homeMain .heroBanner.heroBottom .heroPhoto::after{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  z-index:2 !important;
+  pointer-events:none !important;
+  background:linear-gradient(
+    90deg,
+    #030303 0%,
+    rgba(3,3,3,.62) 16%,
+    rgba(3,3,3,.24) 28%,
+    transparent 42%
+  ) !important;
+}
 
-  .heroBottom .heroPhoto > img{
-    object-position:center 72% !important;
+.homeMain .heroBanner .heroBlack{
+  height:560px !important;
+  min-height:560px !important;
+  position:relative !important;
+  z-index:3 !important;
+  background:#030303 !important;
+}
+
+@media(max-width:900px){
+  .homeMain .heroBanner,
+  .homeMain .heroBanner .heroPhoto,
+  .homeMain .heroBanner .heroBlack{
+    height:auto !important;
+    min-height:0 !important;
   }
 }
-/* SHELIVA_HERO_MODEL_MORE_VISIBLE_END */
+
+/* SHELIVA_HERO_ONLY_FIX_END */
