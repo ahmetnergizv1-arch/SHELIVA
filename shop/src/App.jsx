@@ -393,11 +393,13 @@ export default function App() {
       }
     };
 
-    const open=src=>{
+    const open=(src,sources=[src])=>{
       close();
 
       overlay=document.createElement("div");
       overlay.className="productZoomOverlay";
+      const uniqueSources=[...new Set((sources||[]).filter(Boolean))];
+
       overlay.innerHTML=`
         <div class="productZoomToolbar">
           <button type="button" data-zoom-out aria-label="Uzaklaştır">−</button>
@@ -405,14 +407,46 @@ export default function App() {
           <button type="button" data-zoom-in aria-label="Yakınlaştır">+</button>
           <button type="button" data-zoom-close aria-label="Kapat">×</button>
         </div>
+
         <div class="productZoomStage">
           <img src="${src}" alt="Ürün görseli büyük görünüm">
         </div>
+
+        ${uniqueSources.length>1 ? `
+          <div class="productZoomThumbs">
+            ${uniqueSources.map((item,index)=>`
+              <button
+                type="button"
+                data-zoom-thumb="${index}"
+                class="${item===src ? "active" : ""}"
+              >
+                <img src="${item}" alt="Ürün fotoğrafı ${index+1}">
+              </button>
+            `).join("")}
+          </div>
+        ` : ""}
       `;
 
       document.body.appendChild(overlay);
       document.body.style.overflow="hidden";
-      image=overlay.querySelector("img");
+      image=overlay.querySelector(".productZoomStage > img");
+
+      overlay.querySelectorAll("[data-zoom-thumb]").forEach(button=>{
+        button.onclick=()=>{
+          const next=uniqueSources[Number(button.dataset.zoomThumb)];
+          if(!next||!image) return;
+
+          image.src=next;
+          scale=1;
+          applyScale();
+
+          overlay
+            .querySelectorAll("[data-zoom-thumb]")
+            .forEach(item=>item.classList.remove("active"));
+
+          button.classList.add("active");
+        };
+      });
 
       overlay.querySelector("[data-zoom-close]").onclick=close;
       overlay.querySelector("[data-zoom-in]").onclick=()=>{
@@ -461,13 +495,22 @@ export default function App() {
 
     const click=event=>{
       const target=event.target.closest?.(
-        ".mainPhoto img,.mainPhotoV3 img,.productImg img"
+        ".mainPhoto img,.mainPhotoV3 img"
       );
 
       if(!target?.src) return;
 
       event.preventDefault();
-      open(target.src);
+
+      const sources=[
+        ...document.querySelectorAll(
+          ".thumbs img,.mainPhoto img,.mainPhotoV3 img"
+        )
+      ]
+        .map(img=>img.src)
+        .filter(Boolean);
+
+      open(target.src,sources);
     };
 
     const key=event=>{
