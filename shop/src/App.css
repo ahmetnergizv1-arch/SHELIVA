@@ -3487,3 +3487,33 @@ a {
   object-position:center bottom !important;
 }
 /* SHELIVA_BESTSELLER_BOTTOM_LOCK_END */
+/* SHELIVA_HERO_MODEL_MORE_VISIBLE_START */
+@media (min-width:1100px){
+
+  .heroBanner{
+    height:560px !important;
+  }
+
+  .heroPhoto{
+    overflow:hidden !important;
+    background:#111 !important;
+  }
+
+  .heroTop .heroPhoto > img,
+  .heroBottom .heroPhoto > img{
+    width:100% !important;
+    height:100% !important;
+    object-fit:cover !important;
+    transform:scale(.88) !important;
+    transform-origin:center center !important;
+  }
+
+  .heroTop .heroPhoto > img{
+    object-position:center 72% !important;
+  }
+
+  .heroBottom .heroPhoto > img{
+    object-position:center 72% !important;
+  }
+}
+/* SHELIVA_HERO_MODEL_MORE_VISIBLE_END */
