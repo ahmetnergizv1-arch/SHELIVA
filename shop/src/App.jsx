@@ -1575,7 +1575,27 @@ if (loading) {
                   key={card.title}
                   onClick={()=>goHome(card.key)}
                 >
-                  <img src={card.img} alt={card.product.name}/>
+                  <img
+                    src={card.img}
+                    alt={card.product.name}
+                    onError={event=>{
+                      const fallbackProduct=promoProduct || bestseller;
+                      const fallback=fallbackProduct
+                        ? imageUrl(firstImage(fallbackProduct))
+                        : "";
+
+                      if(
+                        fallback &&
+                        event.currentTarget.src!==fallback &&
+                        event.currentTarget.dataset.fallback!=="1"
+                      ){
+                        event.currentTarget.dataset.fallback="1";
+                        event.currentTarget.src=fallback;
+                      }else{
+                        event.currentTarget.style.display="none";
+                      }
+                    }}
+                  />
                   <strong>{card.title}</strong>
                   <span>by SHELİVA</span>
                 </button>
