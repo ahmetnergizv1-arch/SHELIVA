@@ -3477,3 +3477,10 @@ a {
     height:68px;
   }
 }
+
+/* SHELIVA_HERO_BOTTOM_FINAL_POSITION */
+.heroBanner.heroBottom .heroPhoto > img {
+  object-fit: cover !important;
+  object-position: center top !important;
+}
+/* SHELIVA_HERO_BOTTOM_FINAL_POSITION_END */
