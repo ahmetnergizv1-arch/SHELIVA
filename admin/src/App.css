@@ -1,4 +1,4 @@
-﻿*{box-sizing:border-box}
+*{box-sizing:border-box}
 html,body,#root{margin:0;min-height:100%}
 body{background:#f5f7f6;color:#171b19;font-family:Arial,sans-serif}
 button,input,select,textarea{font:inherit}
@@ -530,3 +530,9 @@ main{padding:30px 34px 50px;min-width:0}
 .adminLightbox img{max-width:94vw;max-height:90vh;object-fit:contain;border-radius:14px}
 .adminLightbox button{position:fixed;right:24px;top:18px;width:48px;height:48px;border-radius:50%;border:1px solid #666;background:#111;color:#fff;font-size:30px}
 @media(max-width:800px){.orderBottomPro{align-items:flex-start}.orderQuickActions{justify-content:flex-start}.confirmOrderSummary{grid-template-columns:1fr}}
+/* SHELIVA_ADMIN_QUICK_NAV_FIX */
+.modalHeaderActions{display:flex;align-items:center;gap:10px}
+.modalDashboardButton{width:auto!important;height:42px!important;padding:0 16px!important;border:1px solid #bedfd2!important;border-radius:8px!important;background:#edf8f3!important;color:#147a5d!important;font-size:12px!important;font-weight:800!important}
+.modalDashboardButton:hover{background:#dff2ea!important}
+.modalCloseButton{width:42px!important;height:42px!important;padding:0!important}
+@media(max-width:700px){.modalDashboardButton{font-size:10px!important;padding:0 10px!important}}

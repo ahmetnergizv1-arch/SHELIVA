@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { jsPDF } from "jspdf";
 import "./App.css";
 
@@ -102,7 +102,7 @@ function calculate(product) {
 export default function App() {
   // SHELIVA_ADMIN_LOGIN_V1
   const [adminToken,setAdminToken]=useState(
-    ()=>sessionStorage.getItem(ADMIN_TOKEN_KEY)||""
+    ()=>localStorage.getItem(ADMIN_TOKEN_KEY)||sessionStorage.getItem(ADMIN_TOKEN_KEY)||""
   );
   const [adminSecret,setAdminSecret]=useState("");
   const [adminLoginError,setAdminLoginError]=useState("");
@@ -143,6 +143,7 @@ export default function App() {
       }
 
       sessionStorage.setItem(ADMIN_TOKEN_KEY,data.token);
+      localStorage.setItem(ADMIN_TOKEN_KEY,data.token);
       setAdminToken(data.token);
       setAdminSecret("");
     }catch(error){
@@ -199,6 +200,18 @@ export default function App() {
   const [adminToast,setAdminToast]=useState(null);
   const [adminLightbox,setAdminLightbox]=useState("");
 
+  useEffect(()=>{
+    const goDashboard=()=>{
+      setModalOpen(false);
+      setEditing(null);
+      setPage("dashboard");
+      window.scrollTo(0,0);
+    };
+
+    window.addEventListener("sheliva-admin-dashboard",goDashboard);
+    return ()=>window.removeEventListener("sheliva-admin-dashboard",goDashboard);
+  },[]);
+
   // SHELIVA_ADMIN_PRODUCT_IMAGE_LIGHTBOX_V1
   useEffect(()=>{
     const click=(event)=>{
@@ -234,27 +247,47 @@ export default function App() {
 
   async function refresh() {
     try {
-      const [p,o,r] =
-        await Promise.all([
-          adminFetch(`${API}/api/products`),
-          adminFetch(`${API}/api/orders`),
-          adminFetch(`${API}/api/reviews`)
-        ]);
-
-      if (!p.ok || !o.ok || !r.ok) {
-        throw new Error();
-      }
+      const p=await adminFetch(`${API}/api/products`);
+      if(!p.ok) throw new Error("Ürün servisine ulaşılamadı.");
 
       setProducts(await p.json());
-      setOrders(await o.json());
-      setReviews(await r.json());
-
-      try {
-        const [tt,rr,ss,mm]=await Promise.all([adminFetch(`${API}/api/tickets`),adminFetch(`${API}/api/returns`),adminFetch(`${API}/api/settings`),adminFetch(`${API}/api/metrics`)]);
-        if(tt.ok)setTickets(await tt.json()); if(rr.ok)setReturns(await rr.json()); if(ss.ok){const incoming=await ss.json(); if(!settingsDirtyRef.current)setSettings(incoming);} if(mm.ok)setMetrics(await mm.json());
-      } catch {}
       setConnected(true);
-    } catch {
+
+      const results=await Promise.allSettled([
+        adminFetch(`${API}/api/orders`),
+        adminFetch(`${API}/api/reviews`),
+        adminFetch(`${API}/api/tickets`),
+        adminFetch(`${API}/api/returns`),
+        adminFetch(`${API}/api/settings`),
+        adminFetch(`${API}/api/metrics`)
+      ]);
+
+      const setters=[setOrders,setReviews,setTickets,setReturns,setSettings,setMetrics];
+
+      for(let i=0;i<results.length;i++){
+        const result=results[i];
+        if(result.status!=="fulfilled") continue;
+
+        const response=result.value;
+
+        if(response.status===401){
+          sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+          localStorage.removeItem(ADMIN_TOKEN_KEY);
+          setAdminToken("");
+          return;
+        }
+
+        if(response.ok){
+          const data=await response.json();
+          if(i===4){
+            if(!settingsDirtyRef.current) setSettings(data);
+          }else{
+            setters[i](data);
+          }
+        }
+      }
+    } catch(error) {
+      console.error("Admin refresh hatası:",error);
       setConnected(false);
     }
   }
@@ -393,35 +426,35 @@ export default function App() {
         ? `${API}/api/products/${editing.id}`
         : `${API}/api/products`;
 
-    const res =
-      await adminFetch(url,{
-        method:
-          exists
-            ? "PUT"
-            : "POST",
-
-        headers:{
-          "Content-Type":"application/json"
-        },
-
-        body:
-          JSON.stringify(editing)
+    try {
+      const res=await adminFetch(url,{
+        method:exists ? "PUT" : "POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(editing)
       });
 
-    const data =
-      await res.json();
+      const data=await res.json().catch(()=>({}));
 
-    if (!res.ok) {
-      return alert(
-        data.error ||
-        "Ürün kaydedilemedi."
-      );
+      if(res.status===401){
+        sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+        localStorage.removeItem(ADMIN_TOKEN_KEY);
+        setAdminToken("");
+        return alert("Yönetici oturumu sona erdi. Tekrar giriş yap.");
+      }
+
+      if(!res.ok){
+        return alert(data.error || `Ürün kaydedilemedi. Sunucu kodu: ${res.status}`);
+      }
+
+      setModalOpen(false);
+      setEditing(null);
+      showAdminToast(exists ? "Ürün güncellendi." : "Yeni ürün eklendi.");
+      await refresh();
+    } catch(error) {
+      console.error("Ürün kaydetme hatası:",error);
+      setConnected(false);
+      alert("Sunucuya ulaşılamadı. Bağlantıyı kontrol edip tekrar dene.");
     }
-
-    setModalOpen(false);
-    setEditing(null);
-
-    await refresh();
   }
 
   async function deleteProduct(product) {
@@ -1760,12 +1793,27 @@ function ProductModal({
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={close}
-          >
-            ×
-          </button>
+          <div className="modalHeaderActions">
+            <button
+              type="button"
+              className="modalDashboardButton"
+              onClick={()=>
+                window.dispatchEvent(
+                  new Event("sheliva-admin-dashboard")
+                )
+              }
+            >
+              ← ANA PANELE DÖN
+            </button>
+
+            <button
+              type="button"
+              className="modalCloseButton"
+              onClick={close}
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="modalBody compact">
