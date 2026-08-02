@@ -14,6 +14,19 @@ import {
 } from "./db-store.js";
 
 const app=express(); const PORT=Number(process.env.PORT || 10000);
+
+app.get("/api/db-health",async(req,res)=>{
+  try{
+    const result=await databaseHealth();
+    res.json(result);
+  }catch(error){
+    res.status(500).json({
+      ok:false,
+      database:"error",
+      error:error?.message||"Veritabani kontrol edilemedi."
+    });
+  }
+});
 const __filename=fileURLToPath(import.meta.url); const __dirname=path.dirname(__filename);
 const DATA=path.join(__dirname,"data"), UP=path.join(__dirname,"uploads");
 fs.mkdirSync(DATA,{recursive:true}); fs.mkdirSync(UP,{recursive:true});
@@ -316,17 +329,6 @@ const profit=o=>o.status!=="Teslim Edildi"?0:Math.round(((o.items||[]).reduce((s
 function tickets(order){const list=read(F.tickets,[]),set=read(F.settings,DEF);let id=list.length?Math.max(...list.map(x=>n(x.id))):0;for(const item of order.items||[])for(let k=0;k<n(item.qty);k++){id++;list.push({id,ticketNo:`${set.ticketPrefix||"FIS"}-${String(id).padStart(6,"0")}`,orderId:order.id,orderNo:order.orderNo,createdAt:now(),printedAt:null,productId:item.productId,productCode:item.code||"",quality:item.quality||"",sole:item.sole||"",model:item.name,color:item.colorName,size:item.size,image:item.image||"",customer:order.customer,cargoCompany:"",cargoTracking:"",status:order.status})}write(F.tickets,list)}
 
 app.use(cors()); app.use(express.json({limit:"100mb"})); app.use("/uploads",express.static(UP));
-app.get("/api/db-health",async(req,res)=>{
-  try{
-    res.json(await databaseHealth());
-  }catch(error){
-    res.status(500).json({
-      ok:false,
-      database:"error",
-      error:error?.message||"Veritabani kontrol edilemedi."
-    });
-  }
-});
 app.get("/api/health",(q,r)=>r.json({ok:true,server:"SHELIVA PRO",time:now()}));
 
 app.post("/api/admin/login",(q,r)=>{
