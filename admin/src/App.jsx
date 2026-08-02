@@ -199,6 +199,32 @@ export default function App() {
   const [adminToast,setAdminToast]=useState(null);
   const [adminLightbox,setAdminLightbox]=useState("");
 
+  // SHELIVA_ADMIN_PRODUCT_IMAGE_LIGHTBOX_V1
+  useEffect(()=>{
+    const click=(event)=>{
+      const img=event.target.closest?.(
+        ".modal img,.productModal img,.editProductModal img,.colorImages img,.imagePreview img"
+      );
+
+      if(!img?.src) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setAdminLightbox(img.src);
+    };
+
+    const key=(event)=>{
+      if(event.key==="Escape") setAdminLightbox("");
+    };
+
+    document.addEventListener("click",click,true);
+    document.addEventListener("keydown",key);
+
+    return ()=>{
+      document.removeEventListener("click",click,true);
+      document.removeEventListener("keydown",key);
+    };
+  },[]);
   const [cargoDraft,setCargoDraft] =
     useState({
       company:"Aras Kargo",
@@ -239,7 +265,7 @@ export default function App() {
     refresh();
 
     const timer =
-      setInterval(refresh,2000);
+      setInterval(refresh,15000);
 
     return () =>
       clearInterval(timer);

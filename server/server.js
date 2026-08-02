@@ -57,7 +57,53 @@ function auth(req){const t=String(req.headers.authorization||"").replace(/^Beare
 function need(req,res,next){const u=auth(req);if(!u)return res.status(401).json({error:"Giriş yapman gerekiyor."});req.user=u;next()}
 
 /* SHELIVA_ADMIN_SECURITY_V1 */
-const adminSessions=new Map();
+const adminSessions={
+  set(key,value){
+    const list=read(F.sessions,[])
+      .filter(x=>!(x.type==="admin"&&x.token===key))
+      .filter(x=>!(x.type==="admin"&&new Date(x.expiresAt).getTime()<=Date.now()));
+
+    list.push({
+      type:"admin",
+      token:key,
+      expiresAt:new Date(value.expiresAt).toISOString(),
+      createdAt:now()
+    });
+
+    write(F.sessions,list);
+    return this;
+  },
+
+  get(key){
+    const item=read(F.sessions,[]).find(x=>
+      x.type==="admin" &&
+      x.token===key &&
+      new Date(x.expiresAt).getTime()>Date.now()
+    );
+
+    return item
+      ? {expiresAt:new Date(item.expiresAt).getTime()}
+      : undefined;
+  },
+
+  delete(key){
+    const list=read(F.sessions,[]);
+    const next=list.filter(x=>!(x.type==="admin"&&x.token===key));
+    if(next.length!==list.length){
+      write(F.sessions,next);
+      return true;
+    }
+    return false;
+  },
+
+  *[Symbol.iterator](){
+    for(const item of read(F.sessions,[])){
+      if(item.type==="admin"){
+        yield [item.token,{expiresAt:new Date(item.expiresAt).getTime()}];
+      }
+    }
+  }
+};
 const ADMIN_SESSION_MS=12*60*60*1000;
 
 function cleanAdminSessions(){
@@ -80,7 +126,7 @@ function needAdmin(req,res,next){
     return res.status(401).json({error:"Yönetici girişi gerekli."});
   }
 
-  session.expiresAt=Date.now()+ADMIN_SESSION_MS;
+  adminSessions.set(t,{expiresAt:Date.now()+ADMIN_SESSION_MS});
   next();
 }
 /* SHELIVA_MAIL_SYSTEM_V1 */

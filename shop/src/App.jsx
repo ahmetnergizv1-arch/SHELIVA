@@ -290,6 +290,43 @@ export default function App() {
       clearInterval(timer);
   },[]);
 
+  // SHELIVA_CART_STOCK_GUARD_V1
+  function availableStockForCartItem(item){
+    const product=products.find(p=>Number(p.id)===Number(item.productId||item.id));
+    if(!product) return 0;
+
+    const color=(product.colors||[]).find(c=>
+      String(c.id)===String(item.colorId) ||
+      String(c.name)===String(item.colorName)
+    );
+
+    if(!color) return 0;
+
+    return Math.max(0,Number(color.sizes?.[String(item.size)]||0));
+  }
+
+  useEffect(()=>{
+    if(!products.length||!cart.length) return;
+
+    setCart(current=>{
+      let changed=false;
+
+      const next=current
+        .map(item=>{
+          const max=availableStockForCartItem(item);
+          const qty=Math.max(0,Math.min(Number(item.qty||1),max));
+
+          if(qty!==Number(item.qty||1)) changed=true;
+
+          return {...item,qty};
+        })
+        .filter(item=>item.qty>0);
+
+      if(next.length!==current.length) changed=true;
+
+      return changed ? next : current;
+    });
+  },[products]);
   useEffect(()=>{
     localStorage.setItem(
       "sheliva-cart-v3",
@@ -331,6 +368,120 @@ export default function App() {
     };
     document.addEventListener("click",click);
     return ()=>document.removeEventListener("click",click);
+  },[]);
+  // SHELIVA_PRODUCT_ZOOM_V1
+  useEffect(()=>{
+    let overlay=null;
+    let image=null;
+    let scale=1;
+    let startDistance=0;
+    let startScale=1;
+
+    const clamp=value=>Math.max(1,Math.min(4,value));
+
+    const applyScale=()=>{
+      if(image) image.style.transform=`scale(${scale})`;
+    };
+
+    const close=()=>{
+      if(overlay){
+        overlay.remove();
+        overlay=null;
+        image=null;
+        scale=1;
+        document.body.style.overflow="";
+      }
+    };
+
+    const open=src=>{
+      close();
+
+      overlay=document.createElement("div");
+      overlay.className="productZoomOverlay";
+      overlay.innerHTML=`
+        <div class="productZoomToolbar">
+          <button type="button" data-zoom-out aria-label="Uzaklaştır">−</button>
+          <span>Yakınlaştırmak için dokun veya sıkıştır</span>
+          <button type="button" data-zoom-in aria-label="Yakınlaştır">+</button>
+          <button type="button" data-zoom-close aria-label="Kapat">×</button>
+        </div>
+        <div class="productZoomStage">
+          <img src="${src}" alt="Ürün görseli büyük görünüm">
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      document.body.style.overflow="hidden";
+      image=overlay.querySelector("img");
+
+      overlay.querySelector("[data-zoom-close]").onclick=close;
+      overlay.querySelector("[data-zoom-in]").onclick=()=>{
+        scale=clamp(scale+.5);
+        applyScale();
+      };
+      overlay.querySelector("[data-zoom-out]").onclick=()=>{
+        scale=clamp(scale-.5);
+        applyScale();
+      };
+
+      overlay.addEventListener("click",event=>{
+        if(event.target===overlay || event.target.classList.contains("productZoomStage")){
+          close();
+        }
+      });
+
+      image.addEventListener("dblclick",()=>{
+        scale=scale>1 ? 1 : 2;
+        applyScale();
+      });
+
+      overlay.addEventListener("touchstart",event=>{
+        if(event.touches.length===2){
+          const [a,b]=event.touches;
+          startDistance=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+          startScale=scale;
+        }
+      },{passive:true});
+
+      overlay.addEventListener("touchmove",event=>{
+        if(event.touches.length===2 && startDistance){
+          const [a,b]=event.touches;
+          const distance=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+          scale=clamp(startScale*(distance/startDistance));
+          applyScale();
+        }
+      },{passive:true});
+
+      overlay.addEventListener("wheel",event=>{
+        event.preventDefault();
+        scale=clamp(scale+(event.deltaY<0 ? .25 : -.25));
+        applyScale();
+      },{passive:false});
+    };
+
+    const click=event=>{
+      const target=event.target.closest?.(
+        ".mainPhoto img,.mainPhotoV3 img,.productImg img"
+      );
+
+      if(!target?.src) return;
+
+      event.preventDefault();
+      open(target.src);
+    };
+
+    const key=event=>{
+      if(event.key==="Escape") close();
+    };
+
+    document.addEventListener("click",click);
+    document.addEventListener("keydown",key);
+
+    return ()=>{
+      document.removeEventListener("click",click);
+      document.removeEventListener("keydown",key);
+      close();
+    };
   },[]);
 
   useEffect(()=>{
@@ -771,51 +922,29 @@ export default function App() {
   }
 
   function changeQty(key,delta) {
-    setCart(
-      prev =>
-        prev
-          .map(item => {
-            if (item.key!==key) {
-              return item;
-            }
+    setCart(prev =>
+      prev
+        .map(item => {
+          if(item.key!==key) return item;
 
-            const product =
-              products.find(
-                p =>
-                  Number(p.id) ===
-                  Number(item.productId)
-              );
+          const maxStock=availableStockForCartItem(item);
+          const nextQty=Number(item.qty||1)+Number(delta||0);
 
-            const color =
-              product?.colors?.find(
-                c => c.id===item.colorId
-              );
+          if(nextQty>maxStock){
+            showToast(
+              "Stok sınırına ulaştınız",
+              `Bu ürünün ${item.size} numarasında yalnızca ${maxStock} adet var.`,
+              "error"
+            );
+            return item;
+          }
 
-            const stock =
-              n(
-                color
-                  ?.sizes?.[String(item.size)]
-              );
-
-            const next =
-              item.qty+delta;
-
-            if (
-              delta>0 &&
-              next>stock
-            ) {
-              return item;
-            }
-
-            return {
-              ...item,
-              qty:next,
-              maxStock:stock
-            };
-          })
-          .filter(
-            item => item.qty>0
-          )
+          return {
+            ...item,
+            qty:Math.max(0,nextQty)
+          };
+        })
+        .filter(item=>item.qty>0)
     );
   }
 
@@ -860,6 +989,11 @@ export default function App() {
     if(reviewBox) reviewBox.value="";
     setReviewRating(5);
     setReviewSent(true);
+      showToast(
+        "Yorumunuz başarıyla gönderildi",
+        "Yorumunuz inceleme için SHELIVA yönetim paneline iletildi.",
+        "success"
+      );
     setTimeout(()=>setReviewSent(false),4200);
     showToast("Yorum gönderildi","Yönetici onayından sonra yayınlanacak.");
   }
@@ -2169,7 +2303,7 @@ if (loading) {
                     className={accountOrderFilter==="active" ? "active" : ""}
                     onClick={()=>setAccountOrderFilter("active")}
                   >
-                    AKTİF SİPARİŞLER
+                    AKTİF SİPARİŞLERİNİZ
                     <b>{(myOrders||[]).filter(o=>!["Teslim Edildi","İptal"].includes(o.status)).length}</b>
                   </button>
 
@@ -2178,7 +2312,7 @@ if (loading) {
                     className={accountOrderFilter==="delivered" ? "active" : ""}
                     onClick={()=>setAccountOrderFilter("delivered")}
                   >
-                    TESLİM EDİLENLER
+                    GEÇMİŞ SİPARİŞLERİNİZ
                     <b>{(myOrders||[]).filter(o=>o.status==="Teslim Edildi").length}</b>
                   </button>
                 </div>
