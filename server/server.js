@@ -4,6 +4,14 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
+import {
+  configureDatabaseStore,
+  initializeDatabaseStore,
+  databaseRead,
+  databaseWrite,
+  databaseHealth,
+  closeDatabase
+} from "./db-store.js";
 
 const app=express(); const PORT=Number(process.env.PORT || 10000);
 const __filename=fileURLToPath(import.meta.url); const __dirname=path.dirname(__filename);
@@ -11,9 +19,22 @@ const DATA=path.join(__dirname,"data"), UP=path.join(__dirname,"uploads");
 fs.mkdirSync(DATA,{recursive:true}); fs.mkdirSync(UP,{recursive:true});
 const F={products:path.join(DATA,"products.json"),orders:path.join(DATA,"orders.json"),reviews:path.join(DATA,"reviews.json"),users:path.join(DATA,"users.json"),otp:path.join(DATA,"otp.json"),sessions:path.join(DATA,"sessions.json"),returns:path.join(DATA,"returns.json"),tickets:path.join(DATA,"production-tickets.json"),settings:path.join(DATA,"settings.json")};
 const DEF={storeName:"SHELİVA",supportPhone:"",supportEmail:"",defaultVatRate:20,cargoFee:0,freeShippingThreshold:2500,orderPrefix:"SH",ticketPrefix:"FIS",cargoCompanies:["Aras Kargo","Yurtiçi Kargo","MNG Kargo","Sürat Kargo","PTT Kargo"],defaultCargoCompany:"Aras Kargo",bankName:"",iban:"",accountHolder:"",instagramUrl:"",youtubeUrl:"",tiktokUrl:"",whatsappUrl:"",otpMode:"test"};
-const ensure=(f,v)=>{if(!fs.existsSync(f))fs.writeFileSync(f,JSON.stringify(v,null,2),"utf8")};
-ensure(F.products,[]);ensure(F.orders,[]);ensure(F.reviews,[]);ensure(F.users,[]);ensure(F.otp,[]);ensure(F.sessions,[]);ensure(F.returns,[]);ensure(F.tickets,[]);ensure(F.settings,DEF);
-const read=(f,d=[])=>{try{return JSON.parse(fs.readFileSync(f,"utf8"))}catch{return d}}; const write=(f,d)=>fs.writeFileSync(f,JSON.stringify(d,null,2),"utf8");
+const LOCAL_DEFAULTS={
+  products:[],
+  orders:[],
+  reviews:[],
+  users:[],
+  otp:[],
+  sessions:[],
+  returns:[],
+  tickets:[],
+  settings:DEF
+};
+
+configureDatabaseStore(F,LOCAL_DEFAULTS);
+
+const read=(file,fallback=[])=>databaseRead(file,fallback);
+const write=(file,data)=>databaseWrite(file,data);
 const n=v=>Number(v||0), now=()=>new Date().toISOString(), nextId=a=>a.length?Math.max(...a.map(x=>n(x.id)))+1:1;
 function phone(v=""){let d=String(v).replace(/\D/g,"");if(d.startsWith("90")&&d.length===12)return d;if(d.startsWith("0")&&d.length===11)return "9"+d;if(d.length===10&&d.startsWith("5"))return "90"+d;return d}
 function hash(p){const s=crypto.randomBytes(16).toString("hex"),h=crypto.scryptSync(String(p),s,64).toString("hex");return `${s}:${h}`}
@@ -262,7 +283,13 @@ async function sendOrderEmail(order,type){
 const sale=p=>Math.round(n(p.price)*(1-Math.max(0,Math.min(100,n(p.discount)))/100)*100)/100;
 const cost=p=>{const buy=n(p.purchasePrice),vat=buy*n(p.vatRate)/100;return Math.round((buy+vat+n(p.shippingCost)+n(p.packagingCost)+n(p.otherCost))*100)/100};
 const stock=p=>(p.colors||[]).reduce((s,c)=>s+Object.values(c.sizes||{}).reduce((a,v)=>a+n(v),0),0);
-function saveImage(data,prefix){if(!data||!String(data).startsWith("data:image/"))return null;const m=String(data).match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);if(!m)return null;let e=m[1].toLowerCase();if(e==="jpeg")e="jpg";const name=`${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${e}`;fs.writeFileSync(path.join(UP,name),Buffer.from(m[2],"base64"));return `/uploads/${name}`}
+function saveImage(data,prefix){
+  if(!data||!String(data).startsWith("data:image/")) return null;
+  const value=String(data);
+  if(!/^data:image\/[a-zA-Z0-9+.-]+;base64,/.test(value)) return null;
+  return value;
+}
+
 function color(c,pid,i){const images=[];for(const x of c.images||[]){if(typeof x==="string"&&x)images.push(x);else if(x?.url)images.push(x.url);else if(x?.data){const s=saveImage(x.data,`p${pid}-c${i+1}`);if(s)images.push(s)}}if(!images.length&&c.image)images.push(c.image);const sizes={};for(const s of ["36","37","38","39","40","41"])sizes[s]=n(c.sizes?.[s]);return{id:c.id||`CLR-${Date.now()}-${i+1}`,name:c.name||`Renk ${i+1}`,images,image:images[0]||"",sizes}}
 const enrich=p=>({...p,stock:stock(p),salePrice:sale(p),totalCost:cost(p),grossProfit:Math.round((sale(p)-cost(p))*100)/100});
 
@@ -289,6 +316,17 @@ const profit=o=>o.status!=="Teslim Edildi"?0:Math.round(((o.items||[]).reduce((s
 function tickets(order){const list=read(F.tickets,[]),set=read(F.settings,DEF);let id=list.length?Math.max(...list.map(x=>n(x.id))):0;for(const item of order.items||[])for(let k=0;k<n(item.qty);k++){id++;list.push({id,ticketNo:`${set.ticketPrefix||"FIS"}-${String(id).padStart(6,"0")}`,orderId:order.id,orderNo:order.orderNo,createdAt:now(),printedAt:null,productId:item.productId,productCode:item.code||"",quality:item.quality||"",sole:item.sole||"",model:item.name,color:item.colorName,size:item.size,image:item.image||"",customer:order.customer,cargoCompany:"",cargoTracking:"",status:order.status})}write(F.tickets,list)}
 
 app.use(cors()); app.use(express.json({limit:"100mb"})); app.use("/uploads",express.static(UP));
+app.get("/api/db-health",async(req,res)=>{
+  try{
+    res.json(await databaseHealth());
+  }catch(error){
+    res.status(500).json({
+      ok:false,
+      database:"error",
+      error:error?.message||"Veritabani kontrol edilemedi."
+    });
+  }
+});
 app.get("/api/health",(q,r)=>r.json({ok:true,server:"SHELIVA PRO",time:now()}));
 
 app.post("/api/admin/login",(q,r)=>{
@@ -630,5 +668,28 @@ app.post("/api/orders/:id/approve-payment",(q,r)=>{
 });
 app.get("/api/settings",(q,r)=>r.json(read(F.settings,DEF)));app.put("/api/settings",(q,r)=>{const x={...read(F.settings,DEF),...q.body};write(F.settings,x);r.json(x)});
 app.get("/api/metrics",(q,r)=>{const products=read(F.products,[]),orders=read(F.orders,[]),rets=read(F.returns,[]),d=orders.filter(o=>o.status==="Teslim Edildi"),v=orders.filter(o=>o.status!=="İptal"),gross=v.reduce((s,o)=>s+n(o.total),0),done=d.reduce((s,o)=>s+n(o.total),0),net=d.reduce((s,o)=>s+profit(o),0),units=d.reduce((s,o)=>s+(o.items||[]).reduce((x,i)=>x+n(i.qty),0),0),model={},color={},size={};for(const o of d)for(const i of o.items||[]){model[i.name]=n(model[i.name])+n(i.qty);color[i.colorName]=n(color[i.colorName])+n(i.qty);size[i.size]=n(size[i.size])+n(i.qty)}const top=x=>Object.entries(x).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([name,value])=>({name,value}));r.json({modelCount:products.length,stockCount:products.reduce((s,p)=>s+stock(p),0),activeOrders:orders.filter(o=>!["Teslim Edildi","İptal"].includes(o.status)).length,grossRevenue:gross,completedRevenue:done,netProfit:Math.round(net*100)/100,orderCount:orders.length,deliveredCount:d.length,unitsSold:units,averageOrder:d.length?done/d.length:0,returnCount:rets.length,returnRate:d.length?(rets.length/d.length)*100:0,topModels:top(model),topColors:top(color),topSizes:top(size)})});
-app.listen(PORT,"0.0.0.0",()=>console.log("\nSHELIVA PRO SERVER 3001 - TEST OTP KODLARI BU EKRANDA\n"));
+async function startServer(){
+  await initializeDatabaseStore();
+
+  app.listen(PORT,"0.0.0.0",()=>{
+    console.log(`SHELIVA PRO SERVER ${PORT} - NEON POSTGRESQL AKTIF`);
+  });
+}
+
+startServer().catch(error=>{
+  console.error("SUNUCU BASLATMA HATASI:",error);
+  process.exit(1);
+});
+
+async function shutdown(signal){
+  console.log(`${signal} alindi, PostgreSQL yazmalari tamamlaniyor...`);
+  try{
+    await closeDatabase();
+  }finally{
+    process.exit(0);
+  }
+}
+
+process.on("SIGTERM",()=>shutdown("SIGTERM"));
+process.on("SIGINT",()=>shutdown("SIGINT"));
 
