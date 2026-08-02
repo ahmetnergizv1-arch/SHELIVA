@@ -1558,6 +1558,10 @@ if (loading) {
                     firstImage(bestseller)
                   )
                 }
+                style={{
+                  objectFit:"cover",
+                  objectPosition:"center bottom"
+                }}
               />
             </div>
 

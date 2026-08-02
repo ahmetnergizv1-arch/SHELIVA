@@ -3478,9 +3478,12 @@ a {
   }
 }
 
-/* SHELIVA_HERO_BOTTOM_FINAL_POSITION */
+
+/* SHELIVA_BESTSELLER_BOTTOM_LOCK */
 .heroBanner.heroBottom .heroPhoto > img {
-  object-fit: cover !important;
-  object-position: center top !important;
+  width:100% !important;
+  height:100% !important;
+  object-fit:cover !important;
+  object-position:center bottom !important;
 }
-/* SHELIVA_HERO_BOTTOM_FINAL_POSITION_END */
+/* SHELIVA_BESTSELLER_BOTTOM_LOCK_END */
