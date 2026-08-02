@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const API = "https://sheliva-server.onrender.com";
@@ -781,12 +781,7 @@ export default function App() {
       `${index+1}. ${item.name} • ${item.colorName} • ${item.size} numara • ${item.qty} adet`
     );
     return [
-      "Merhaba SHELIVA, sipariş talebim için ödeme yapmak istiyorum.",
-      `Sipariş No: ${order.orderNo}`,
-      "",
-      ...lines,
-      "",
-      `Toplam: ${money(order.total)}`,
+      `Merhaba SHELIVA, sipariş talebim için ödeme yapmak istiyorum.\nSipariş No: ${orderNo}\n\nToplam: ${totalText}`,
       `İletişim: ${channel}`
     ].join("\n");
   }
@@ -1575,7 +1570,7 @@ if (loading) {
                   key={card.title}
                   onClick={()=>goHome(card.key)}
                 >
-                  <img src={card.img} alt={card.product.name}/>
+                  <img src={card.img} alt={card.product.name || "SHELIVA"}/>
                   <strong>{card.title}</strong>
                   <span>by SHELİVA</span>
                 </button>
@@ -2439,7 +2434,7 @@ if (loading) {
                         {order.paymentStatus!=="Ödendi" && (
                           <div className="orderContactButtons">
                             <button onClick={()=>openWhatsAppOrder(order)}>WHATSAPP İLE ÖDEME</button>
-                            <button onClick={()=>openInstagramOrder(order)}>INSTAGRAM İLE SİPARİŞ VER</button>
+                            <button onClick={()=>openInstagramOrder(order)}>INSTAGRAM İLE ÖDEME YAP</button>
                           </div>
                         )}
                       </article>
@@ -2862,7 +2857,7 @@ if (loading) {
                 </div>
                 <div className="successContactButtons">
                   <button type="button" onClick={()=>openWhatsAppOrder(orderSuccess)}>WHATSAPP İLE ÖDEME YAP</button>
-                  <button type="button" onClick={()=>openInstagramOrder(orderSuccess)}>INSTAGRAM İLE SİPARİŞ VER</button>
+                  <button type="button" onClick={()=>openInstagramOrder(orderSuccess)}>INSTAGRAM İLE ÖDEME YAP</button>
                 </div>
                 <button
                   type="button"
