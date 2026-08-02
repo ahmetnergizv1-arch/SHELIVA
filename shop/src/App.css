@@ -3080,3 +3080,136 @@ a {
   }
 }
 /* SHELIVA_PC_ACCOUNT_MIN_GROW_V6_END */
+
+/* SHELIVA_MOBILE_CART_COMPACT_V1_START */
+@media (max-width: 760px) {
+  .sideDrawer:not(.checkoutMode) {
+    width: min(88vw, 360px) !important;
+    max-width: min(88vw, 360px) !important;
+    height: 94dvh !important;
+    max-height: 94dvh !important;
+    top: 3dvh !important;
+    right: 6px !important;
+    border-radius: 14px 0 0 14px !important;
+    overflow-x: hidden !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerHead {
+    min-height: 56px !important;
+    padding: 12px 14px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerHead h2,
+  .sideDrawer:not(.checkoutMode) .drawerHead strong {
+    font-size: 16px !important;
+    line-height: 1.15 !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerHead button {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 20px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerBody {
+    padding: 10px 12px !important;
+    gap: 9px !important;
+    overflow-x: hidden !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerItem {
+    grid-template-columns: 62px minmax(0,1fr) auto !important;
+    gap: 9px !important;
+    padding: 9px !important;
+    border-radius: 10px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerItem img {
+    width: 62px !important;
+    height: 72px !important;
+    object-fit: cover !important;
+    object-position: center bottom !important;
+    border-radius: 7px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerItem h3,
+  .sideDrawer:not(.checkoutMode) .drawerItem b {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    margin: 0 0 4px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerItem p,
+  .sideDrawer:not(.checkoutMode) .drawerItem span,
+  .sideDrawer:not(.checkoutMode) .drawerItem small {
+    font-size: 8px !important;
+    line-height: 1.35 !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .qtyControl,
+  .sideDrawer:not(.checkoutMode) [class*="qty"] {
+    gap: 5px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .qtyControl button,
+  .sideDrawer:not(.checkoutMode) [class*="qty"] button {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerBottom {
+    padding: 11px 13px 13px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerTotal {
+    padding: 8px 0 !important;
+    font-size: 12px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerBottom > button {
+    min-height: 42px !important;
+    padding: 10px !important;
+    font-size: 10px !important;
+    border-radius: 9px !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .freeShippingCartNotice {
+    margin: 0 0 8px !important;
+    padding: 8px 9px !important;
+    font-size: 8px !important;
+    line-height: 1.4 !important;
+  }
+
+  .sideDrawer:not(.checkoutMode),
+  .sideDrawer:not(.checkoutMode) * {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+  }
+
+  .sideDrawer:not(.checkoutMode)::-webkit-scrollbar:horizontal,
+  .sideDrawer:not(.checkoutMode) *::-webkit-scrollbar:horizontal {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .sideDrawer:not(.checkoutMode) {
+    width: min(86vw, 330px) !important;
+    max-width: min(86vw, 330px) !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerItem {
+    grid-template-columns: 56px minmax(0,1fr) auto !important;
+  }
+
+  .sideDrawer:not(.checkoutMode) .drawerItem img {
+    width: 56px !important;
+    height: 66px !important;
+  }
+}
+/* SHELIVA_MOBILE_CART_COMPACT_V1_END */
