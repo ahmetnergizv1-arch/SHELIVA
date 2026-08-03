@@ -10,10 +10,20 @@ import {
   databaseRead,
   databaseWrite,
   databaseHealth,
+  flushDatabaseWrites,
   closeDatabase
 } from "./db-store.js";
 
 const app=express(); const PORT=Number(process.env.PORT || 10000);
+
+/* SHELIVA_ORDER_MUTATION_LOCK_V1 */
+let orderMutationQueue=Promise.resolve();
+
+function withOrderMutation(task){
+  const run=orderMutationQueue.then(task,task);
+  orderMutationQueue=run.catch(()=>{});
+  return run;
+}
 
 app.get("/api/db-health",async(req,res)=>{
   try{
@@ -371,6 +381,28 @@ function restoreOrderStock(order){
   order.stockRestoredAt=now();
   return order;
 }
+function reverseOrderSales(order){
+  if(!order?.salesCounted || order?.salesReversed) return order;
+
+  const products=read(F.products,[]);
+
+  for(const item of order.items||[]){
+    const product=products.find(p=>n(p.id)===n(item.productId));
+    if(!product) continue;
+
+    product.totalSold=Math.max(
+      0,
+      n(product.totalSold)-n(item.qty)
+    );
+  }
+
+  write(F.products,products);
+  order.salesCounted=false;
+  order.salesReversed=true;
+  order.salesReversedAt=now();
+  return order;
+}
+
 const profit=o=>o.status!=="Teslim Edildi"?0:Math.round(((o.items||[]).reduce((s,i)=>s+(n(i.price)-n(i.unitCost))*n(i.qty),0)-n(o.actualCargoCost)-n(o.refundCost))*100)/100;
 function tickets(order){const list=read(F.tickets,[]),set=read(F.settings,DEF);let id=list.length?Math.max(...list.map(x=>n(x.id))):0;for(const item of order.items||[])for(let k=0;k<n(item.qty);k++){id++;list.push({id,ticketNo:`${set.ticketPrefix||"FIS"}-${String(id).padStart(6,"0")}`,orderId:order.id,orderNo:order.orderNo,createdAt:now(),printedAt:null,productId:item.productId,productCode:item.code||"",quality:item.quality||"",sole:item.sole||"",model:item.name,color:item.colorName,size:item.size,image:item.image||"",customer:order.customer,cargoCompany:"",cargoTracking:"",status:order.status})}write(F.tickets,list)}
 
@@ -645,74 +677,286 @@ app.post("/api/products",(q,r)=>{const list=read(F.products,[]),id=nextId(list),
 app.put("/api/products/:id",(q,r)=>{const id=n(q.params.id),list=read(F.products,[]),idx=list.findIndex(p=>n(p.id)===id);if(idx<0)return r.status(404).json({error:"Ürün bulunamadı."});const old=list[idx],colors=Array.isArray(q.body.colors)?q.body.colors.map((c,i)=>color(c,id,i)):old.colors||[];list[idx]={...old,...q.body,id,colors,image:colors?.[0]?.images?.[0]||old.image||"",updatedAt:now()};write(F.products,list);r.json(enrich(list[idx]))});app.delete("/api/products/:id",(q,r)=>{write(F.products,read(F.products,[]).filter(p=>n(p.id)!==n(q.params.id)));r.json({ok:true})});
 
 app.get("/api/orders",(q,r)=>r.json([...read(F.orders,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));
-app.post("/api/orders",(q,r)=>{const user=auth(q);const orders=read(F.orders,[]),products=read(F.products,[]),set=read(F.settings,DEF),items=Array.isArray(q.body.items)?q.body.items:[];if(!items.length)return r.status(400).json({error:"Sepet boş."});const out=[];for(const i of items){const p=products.find(x=>n(x.id)===n(i.productId)),c=p?.colors?.find(x=>x.id===i.colorId),size=String(i.size),qty=Math.max(1,n(i.qty)),st=n(c?.sizes?.[size]);if(!p||!c)return r.status(400).json({error:"Ürün varyantı bulunamadı."});if(st<=0)return r.status(400).json({error:`${p.name} ${c.name} ${size} tükendi.`});if(qty>st)return r.status(400).json({error:`En fazla ${st} adet alınabilir.`});out.push({key:`${p.id}-${c.id}-${size}`,productId:p.id,code:p.code,quality:p.quality||"",sole:p.sole||"",name:p.name,colorId:c.id,colorName:c.name,size,qty,listPrice:n(p.price),discount:n(p.discount),price:sale(p),unitCost:cost(p),image:c.images?.[0]||c.image||p.image||""})}/* SIPARIS_STOK_REZERVASYONU_V2 */
-for(const item of out){
-  const product=products.find(p=>n(p.id)===n(item.productId));
-  const color=product?.colors?.find(c=>c.id===item.colorId);
-  const size=String(item.size);
-  if(!color) continue;
-  color.sizes[size]=Math.max(0,n(color.sizes[size])-n(item.qty));
-}
-write(F.products,products);const id=nextId(orders),subtotal=out.reduce((s,i)=>s+n(i.price)*n(i.qty),0),cargoFee=subtotal>=n(set.freeShippingThreshold)?0:n(set.cargoFee);const o={id,orderNo:`${set.orderPrefix||"SH"}-${String(id).padStart(6,"0")}`,userId:user?.id||null,source:"SHELIVA Web",customer:{name:q.body.customer?.name||user?.name||"",phone:q.body.customer?.phone||user?.phone||"",email:q.body.customer?.email||user?.email||"",city:q.body.customer?.city||"",district:q.body.customer?.district||"",neighborhood:q.body.customer?.neighborhood||"",postalCode:q.body.customer?.postalCode||"",address:q.body.customer?.address||"",note:q.body.customer?.note||""},items:out,subtotal,cargoFee,total:subtotal+cargoFee,paymentMethod:q.body.paymentMethod||"Havale / EFT",paymentStatus:"Onay Bekliyor",status:"Yeni",statusHistory:[{status:"Yeni",at:now()}],createdAt:now(),cargoCompany:"",cargoTracking:"",cargoNote:"",actualCargoCost:0,refundCost:0};o.stockReserved=true;o.stockRestored=false;o.stockReservedAt=now();orders.push(o);write(F.orders,orders);sendOrderEmail(o,"created").catch(()=>{});r.status(201).json(o)});
-app.put("/api/orders/:id/status",(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const s=String(q.body.status||"");if(!["Yeni","Hazırlanıyor","Kargoya Verildi","Teslim Edildi","İptal"].includes(s))return r.status(400).json({error:"Geçersiz durum."});if(["Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].includes(s)&&list[idx].paymentStatus!=="Ödendi")return r.status(400).json({error:"Ödeme onaylanmadan sipariş ilerletilemez."});list[idx].status=s;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:s,at:now()}];if(s==="Kargoya Verildi"){list[idx].cargoCompany=q.body.cargoCompany||list[idx].cargoCompany||"";list[idx].cargoTracking=q.body.cargoTracking||list[idx].cargoTracking||"";list[idx].cargoNote=q.body.cargoNote||list[idx].cargoNote||"";list[idx].actualCargoCost=n(q.body.actualCargoCost??list[idx].actualCargoCost)}write(F.orders,list);write(F.tickets,read(F.tickets,[]).map(t=>n(t.orderId)===n(list[idx].id)?{...t,status:s,cargoCompany:list[idx].cargoCompany,cargoTracking:list[idx].cargoTracking}:t));if(s==="İptal"){list[idx]=restoreOrderStock(list[idx]);write(F.orders,list);}const mailType={"Hazırlanıyor":"preparing","Kargoya Verildi":"shipped","Teslim Edildi":"delivered","İptal":"cancelled"}[s];if(mailType)sendOrderEmail(list[idx],mailType).catch(()=>{});r.json(list[idx])});
+app.post("/api/orders",async(q,r)=>{
+  try{
+    const created=await withOrderMutation(async()=>{
+      const user=auth(q);
+      const orders=read(F.orders,[]);
+      const products=read(F.products,[]);
+      const set=read(F.settings,DEF);
+      const incoming=Array.isArray(q.body.items)?q.body.items:[];
+
+      if(!incoming.length){
+        const error=new Error("Sepet boş.");
+        error.status=400;
+        throw error;
+      }
+
+      /* Aynı varyant sepette birden fazla satırsa miktarları birleştir */
+      const grouped=new Map();
+
+      for(const raw of incoming){
+        const key=`${n(raw.productId)}|${String(raw.colorId)}|${String(raw.size)}`;
+        const previous=grouped.get(key);
+
+        if(previous){
+          previous.qty+=Math.max(1,n(raw.qty));
+        }else{
+          grouped.set(key,{
+            productId:n(raw.productId),
+            colorId:String(raw.colorId),
+            size:String(raw.size),
+            qty:Math.max(1,n(raw.qty))
+          });
+        }
+      }
+
+      const out=[];
+
+      /* Bütün stoklar doğrulanmadan hiçbirini düşürme */
+      for(const item of grouped.values()){
+        const product=products.find(p=>n(p.id)===n(item.productId));
+        const color=product?.colors?.find(c=>String(c.id)===item.colorId);
+        const available=n(color?.sizes?.[item.size]);
+
+        if(!product||!color){
+          const error=new Error("Ürün varyantı bulunamadı.");
+          error.status=400;
+          throw error;
+        }
+
+        if(available<=0){
+          const error=new Error(
+            `${product.name} - ${color.name} - ${item.size} numara tükendi.`
+          );
+          error.status=409;
+          throw error;
+        }
+
+        if(item.qty>available){
+          const error=new Error(
+            `${product.name} - ${color.name} - ${item.size} numarada yalnızca ${available} adet kaldı.`
+          );
+          error.status=409;
+          throw error;
+        }
+
+        out.push({
+          key:`${product.id}-${color.id}-${item.size}`,
+          productId:product.id,
+          code:product.code,
+          quality:product.quality||"",
+          sole:product.sole||"",
+          name:product.name,
+          colorId:color.id,
+          colorName:color.name,
+          size:item.size,
+          qty:item.qty,
+          listPrice:n(product.price),
+          discount:n(product.discount),
+          price:sale(product),
+          unitCost:cost(product),
+          image:color.images?.[0]||color.image||product.image||""
+        });
+      }
+
+      /* Kontroller geçti: stok yalnızca burada bir kez düşer */
+      for(const item of out){
+        const product=products.find(p=>n(p.id)===n(item.productId));
+        const color=product.colors.find(c=>String(c.id)===String(item.colorId));
+        color.sizes=color.sizes||{};
+        color.sizes[String(item.size)]=
+          n(color.sizes[String(item.size)])-n(item.qty);
+      }
+
+      const id=nextId(orders);
+      const subtotal=out.reduce(
+        (sum,item)=>sum+n(item.price)*n(item.qty),
+        0
+      );
+      const cargoFee=
+        subtotal>=n(set.freeShippingThreshold)
+          ? 0
+          : n(set.cargoFee);
+
+      const order={
+        id,
+        orderNo:`${set.orderPrefix||"SH"}-${String(id).padStart(6,"0")}`,
+        userId:user?.id||null,
+        source:"SHELIVA Web",
+        customer:{
+          name:q.body.customer?.name||user?.name||"",
+          phone:q.body.customer?.phone||user?.phone||"",
+          email:q.body.customer?.email||user?.email||"",
+          city:q.body.customer?.city||"",
+          district:q.body.customer?.district||"",
+          neighborhood:q.body.customer?.neighborhood||"",
+          postalCode:q.body.customer?.postalCode||"",
+          address:q.body.customer?.address||"",
+          note:q.body.customer?.note||""
+        },
+        items:out,
+        subtotal,
+        cargoFee,
+        total:subtotal+cargoFee,
+        paymentMethod:q.body.paymentMethod||"Havale / EFT",
+        paymentStatus:"Onay Bekliyor",
+        status:"Yeni",
+        statusHistory:[{status:"Yeni",at:now()}],
+        createdAt:now(),
+        cargoCompany:"",
+        cargoTracking:"",
+        cargoNote:"",
+        actualCargoCost:0,
+        refundCost:0,
+        stockReserved:true,
+        stockRestored:false,
+        stockReservedAt:now(),
+        salesCounted:false,
+        salesReversed:false
+      };
+
+      orders.push(order);
+      write(F.products,products);
+      write(F.orders,orders);
+      await flushDatabaseWrites();
+
+      return order;
+    });
+
+    sendOrderEmail(created,"created").catch(()=>{});
+    r.status(201).json(created);
+  }catch(error){
+    console.error("SİPARİŞ OLUŞTURMA HATASI:",error?.message||error);
+    r.status(error?.status||500).json({
+      error:error?.message||"Sipariş oluşturulamadı."
+    });
+  }
+});
+app.put("/api/orders/:id/status",async(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const s=String(q.body.status||"");if(!["Yeni","Hazırlanıyor","Kargoya Verildi","Teslim Edildi","İptal"].includes(s))return r.status(400).json({error:"Geçersiz durum."});if(["Hazırlanıyor","Kargoya Verildi","Teslim Edildi"].includes(s)&&list[idx].paymentStatus!=="Ödendi")return r.status(400).json({error:"Ödeme onaylanmadan sipariş ilerletilemez."});list[idx].status=s;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:s,at:now()}];if(s==="Kargoya Verildi"){list[idx].cargoCompany=q.body.cargoCompany||list[idx].cargoCompany||"";list[idx].cargoTracking=q.body.cargoTracking||list[idx].cargoTracking||"";list[idx].cargoNote=q.body.cargoNote||list[idx].cargoNote||"";list[idx].actualCargoCost=n(q.body.actualCargoCost??list[idx].actualCargoCost)}write(F.orders,list);write(F.tickets,read(F.tickets,[]).map(t=>n(t.orderId)===n(list[idx].id)?{...t,status:s,cargoCompany:list[idx].cargoCompany,cargoTracking:list[idx].cargoTracking}:t));if(s==="İptal"){
+  await withOrderMutation(async()=>{
+    list[idx]=restoreOrderStock(list[idx]);
+    list[idx]=reverseOrderSales(list[idx]);
+    write(F.orders,list);
+    await flushDatabaseWrites();
+  });
+}const mailType={"Hazırlanıyor":"preparing","Kargoya Verildi":"shipped","Teslim Edildi":"delivered","İptal":"cancelled"}[s];if(mailType)sendOrderEmail(list[idx],mailType).catch(()=>{});r.json(list[idx])});
 app.post("/api/orders/:id/revert",(q,r)=>{const list=read(F.orders,[]),idx=list.findIndex(o=>n(o.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});const p={"Hazırlanıyor":"Yeni","Kargoya Verildi":"Hazırlanıyor","Teslim Edildi":"Kargoya Verildi"}[list[idx].status];if(!p)return r.status(400).json({error:"Bu durum geri alınamaz."});list[idx].status=p;list[idx].statusHistory=[...(list[idx].statusHistory||[]),{status:p,at:now(),reverted:true}];write(F.orders,list);r.json(list[idx])});
 
 app.get("/api/tickets",(q,r)=>r.json([...read(F.tickets,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));app.put("/api/tickets/:id/printed",(q,r)=>{const list=read(F.tickets,[]),idx=list.findIndex(t=>n(t.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Fiş bulunamadı."});list[idx].printedAt=now();write(F.tickets,list);r.json(list[idx])});
 app.get("/api/reviews",(q,r)=>r.json([...read(F.reviews,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));app.get("/api/products/:id/reviews",(q,r)=>r.json(read(F.reviews,[]).filter(x=>n(x.productId)===n(q.params.id)&&x.status==="Onaylandı")));app.post("/api/reviews",need,(q,r)=>{const list=read(F.reviews,[]),anonymous=q.body.anonymous===true,x={id:nextId(list),userId:q.user.id,userName:anonymous?"Gizli Kullanıcı":q.user.name,anonymous,productId:n(q.body.productId),rating:Math.max(1,Math.min(5,n(q.body.rating))),text:String(q.body.text||"").trim(),status:"Bekliyor",createdAt:now()};if(!x.text)return r.status(400).json({error:"Yorum boş olamaz."});list.push(x);write(F.reviews,list);r.status(201).json(x)});app.put("/api/reviews/:id",(q,r)=>{const list=read(F.reviews,[]),idx=list.findIndex(x=>n(x.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"Yorum bulunamadı."});list[idx].status=q.body.status||list[idx].status;write(F.reviews,list);r.json(list[idx])});app.delete("/api/reviews/:id",(q,r)=>{const id=n(q.params.id),list=read(F.reviews,[]),next=list.filter(x=>n(x.id)!==id);if(next.length===list.length)return r.status(404).json({error:"Yorum bulunamadı."});write(F.reviews,next);r.json({ok:true})});
 app.get("/api/returns",(q,r)=>r.json([...read(F.returns,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));app.post("/api/returns",need,(q,r)=>{const o=read(F.orders,[]).find(x=>n(x.id)===n(q.body.orderId)&&n(x.userId)===n(q.user.id));if(!o)return r.status(404).json({error:"Sipariş bulunamadı."});if(o.status!=="Teslim Edildi")return r.status(400).json({error:"Sadece teslim edilen sipariş iade edilebilir."});const list=read(F.returns,[]),x={id:nextId(list),orderId:o.id,orderNo:o.orderNo,userId:user?.id||null,customerName:q.user.name,reason:String(q.body.reason||""),status:"Talep",createdAt:now()};list.push(x);write(F.returns,list);r.status(201).json(x)});app.put("/api/returns/:id",(q,r)=>{const list=read(F.returns,[]),idx=list.findIndex(x=>n(x.id)===n(q.params.id));if(idx<0)return r.status(404).json({error:"İade bulunamadı."});list[idx].status=q.body.status||list[idx].status;list[idx].updatedAt=now();write(F.returns,list);r.json(list[idx])});
 
-app.post("/api/orders/:id/approve-payment",(q,r)=>{
-  const id=n(q.params.id);
-  const orders=read(F.orders,[]);
-  const idx=orders.findIndex(o=>n(o.id)===id);
-  if(idx<0)return r.status(404).json({error:"Sipariş bulunamadı."});
+app.post("/api/orders/:id/approve-payment",async(q,r)=>{
+  try{
+    const updated=await withOrderMutation(async()=>{
+      const id=n(q.params.id);
+      const orders=read(F.orders,[]);
+      const idx=orders.findIndex(order=>n(order.id)===id);
 
-  const order=orders[idx];
-  if(order.paymentStatus==="Ödendi"){
-    return r.json(order);
+      if(idx<0){
+        const error=new Error("Sipariş bulunamadı.");
+        error.status=404;
+        throw error;
+      }
+
+      const order=orders[idx];
+
+      if(order.status==="İptal"){
+        const error=new Error("İptal edilmiş siparişin ödemesi onaylanamaz.");
+        error.status=400;
+        throw error;
+      }
+
+      if(order.paymentStatus==="Ödendi"){
+        return order;
+      }
+
+      const products=read(F.products,[]);
+
+      /* Eski siparişlerde rezervasyon yoksa ödeme anında güvenle ayır */
+      if(!order.stockReserved || order.stockRestored){
+        for(const item of order.items||[]){
+          const product=products.find(p=>n(p.id)===n(item.productId));
+          const color=product?.colors?.find(
+            c=>String(c.id)===String(item.colorId)
+          );
+          const current=n(color?.sizes?.[String(item.size)]);
+
+          if(!product||!color){
+            const error=new Error(`${item.name} varyantı bulunamadı.`);
+            error.status=400;
+            throw error;
+          }
+
+          if(current<n(item.qty)){
+            const error=new Error(
+              `${item.name} - ${item.colorName} - ${item.size} numarada yeterli stok yok. Mevcut: ${current}`
+            );
+            error.status=409;
+            throw error;
+          }
+        }
+
+        for(const item of order.items||[]){
+          const product=products.find(p=>n(p.id)===n(item.productId));
+          const color=product.colors.find(
+            c=>String(c.id)===String(item.colorId)
+          );
+
+          color.sizes[String(item.size)]=
+            n(color.sizes[String(item.size)])-n(item.qty);
+        }
+
+        order.stockReserved=true;
+        order.stockRestored=false;
+        order.stockReservedAt=now();
+      }
+
+      /* Satılan adet yalnızca bir kez artırılır */
+      if(!order.salesCounted){
+        for(const item of order.items||[]){
+          const product=products.find(p=>n(p.id)===n(item.productId));
+          if(product){
+            product.totalSold=n(product.totalSold)+n(item.qty);
+          }
+        }
+
+        order.salesCounted=true;
+        order.salesReversed=false;
+        order.salesCountedAt=now();
+      }
+
+      order.paymentStatus="Ödendi";
+      order.status="Hazırlanıyor";
+      order.paymentApprovedAt=now();
+      order.statusHistory=[
+        ...(order.statusHistory||[]),
+        {status:"Ödeme Onaylandı",at:now()},
+        {status:"Hazırlanıyor",at:now()}
+      ];
+
+      orders[idx]=order;
+      write(F.products,products);
+      write(F.orders,orders);
+
+      const existingTickets=read(F.tickets,[])
+        .some(ticket=>n(ticket.orderId)===n(order.id));
+
+      if(!existingTickets) tickets(order);
+
+      await flushDatabaseWrites();
+      return order;
+    });
+
+    sendOrderEmail(updated,"paid").catch(()=>{});
+    r.json(updated);
+  }catch(error){
+    console.error("ÖDEME ONAY HATASI:",error?.message||error);
+    r.status(error?.status||500).json({
+      error:error?.message||"Ödeme onaylanamadı."
+    });
   }
-
-  const products=read(F.products,[]);
-
-  for(const item of order.items||[]){
-    const product=products.find(p=>n(p.id)===n(item.productId));
-    const color=product?.colors?.find(c=>c.id===item.colorId);
-    const current=n(color?.sizes?.[String(item.size)]);
-
-    if(!product||!color){
-      return r.status(400).json({error:`${item.name} varyantı bulunamadı.`});
-    }
-
-    if(current<n(item.qty)){
-      return r.status(400).json({
-        error:`${item.name} - ${item.colorName} - ${item.size} numarada yeterli stok yok. Mevcut: ${current}`
-      });
-    }
-  }
-
-  for(const item of order.items||[]){
-    const product=products.find(p=>n(p.id)===n(item.productId));
-    const color=product.colors.find(c=>c.id===item.colorId);
-    color.sizes[String(item.size)]=n(color.sizes[String(item.size)])-n(item.qty);
-    product.totalSold=n(product.totalSold)+n(item.qty);
-  }
-
-  write(F.products,products);
-
-  order.paymentStatus="Ödendi";
-  order.status="Hazırlanıyor";
-  order.paymentApprovedAt=now();
-  order.statusHistory=[
-    ...(order.statusHistory||[]),
-    {status:"Ödeme Onaylandı",at:now()},
-    {status:"Hazırlanıyor",at:now()}
-  ];
-
-  orders[idx]=order;
-  write(F.orders,orders);
-  const existingTickets=read(F.tickets,[]).some(t=>n(t.orderId)===n(order.id));
-  if(!existingTickets) tickets(order);
-  r.json(order);
 });
 app.get("/api/settings",(q,r)=>r.json(read(F.settings,DEF)));app.put("/api/settings",(q,r)=>{const x={...read(F.settings,DEF),...q.body};write(F.settings,x);r.json(x)});
 app.get("/api/metrics",(q,r)=>{const products=read(F.products,[]),orders=read(F.orders,[]),rets=read(F.returns,[]),d=orders.filter(o=>o.status==="Teslim Edildi"),v=orders.filter(o=>o.status!=="İptal"),gross=v.reduce((s,o)=>s+n(o.total),0),done=d.reduce((s,o)=>s+n(o.total),0),net=d.reduce((s,o)=>s+profit(o),0),units=d.reduce((s,o)=>s+(o.items||[]).reduce((x,i)=>x+n(i.qty),0),0),model={},color={},size={};for(const o of d)for(const i of o.items||[]){model[i.name]=n(model[i.name])+n(i.qty);color[i.colorName]=n(color[i.colorName])+n(i.qty);size[i.size]=n(size[i.size])+n(i.qty)}const top=x=>Object.entries(x).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([name,value])=>({name,value}));r.json({modelCount:products.length,stockCount:products.reduce((s,p)=>s+stock(p),0),activeOrders:orders.filter(o=>!["Teslim Edildi","İptal"].includes(o.status)).length,grossRevenue:gross,completedRevenue:done,netProfit:Math.round(net*100)/100,orderCount:orders.length,deliveredCount:d.length,unitsSold:units,averageOrder:d.length?done/d.length:0,returnCount:rets.length,returnRate:d.length?(rets.length/d.length)*100:0,topModels:top(model),topColors:top(color),topSizes:top(size)})});
