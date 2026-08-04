@@ -1,0 +1,9 @@
+﻿{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://sheliva-api.ahmetnergizv1.workers.dev/api/:path*"
+    }
+  ]
+}
