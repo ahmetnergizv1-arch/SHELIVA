@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { jsPDF } from "jspdf";
 import "./App.css";
 
-const API = "https://sheliva-server.onrender.com";
+const API = "";
 const ADMIN_TOKEN_KEY = "sheliva-admin-session-v1";
 const SIZES = ["36","37","38","39","40","41"];
 

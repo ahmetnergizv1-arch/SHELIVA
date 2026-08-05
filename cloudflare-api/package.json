@@ -1,0 +1,16 @@
+{
+  "name": "sheliva-cloudflare-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "wrangler": "^4.118.0"
+  }
+}
