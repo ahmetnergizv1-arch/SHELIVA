@@ -970,8 +970,46 @@ const nodeHandler = httpServerHandler({ port: PORT });
 
 export default {
   async fetch(request, workerEnv, ctx) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/api/health") {
+      return Response.json({
+        ok: true,
+        service: "sheliva-api",
+        database: "cloudflare-d1",
+        storage: "cloudflare-r2"
+      });
+    }
+
+    if (url.pathname.startsWith("/api/images/")) {
+      if (!workerEnv.IMAGES) {
+        return new Response("R2 binding missing", { status: 500 });
+      }
+
+      const key = decodeURIComponent(
+        url.pathname.slice("/api/images/".length)
+      );
+
+      if (!key || key.includes("..")) {
+        return new Response("Bad image key", { status: 400 });
+      }
+
+      const object = await workerEnv.IMAGES.get(key);
+
+      if (!object) {
+        return new Response("Not found", { status: 404 });
+      }
+
+      const headers = new Headers();
+      object.writeHttpMetadata(headers);
+      headers.set("etag", object.httpEtag);
+      headers.set("cache-control", "public, max-age=31536000, immutable");
+
+      return new Response(object.body, { headers });
+    }
+
     return withDatabaseRequest(
-      workerEnv.DATABASE_URL,
+      workerEnv,
       () => nodeHandler.fetch(request, workerEnv, ctx)
     );
   }

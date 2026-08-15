@@ -1,8 +1,5 @@
-import pg from "pg";
-import fs from "fs";
 import { AsyncLocalStorage } from "node:async_hooks";
 
-const { Client } = pg;
 const requestStore = new AsyncLocalStorage();
 
 let fileMap = {};
@@ -17,22 +14,13 @@ function keyForFile(file) {
   return found[0];
 }
 
-function readLocal(file, fallback) {
-  try {
-    if (!fs.existsSync(file)) return clone(fallback);
-    const raw = fs.readFileSync(file, "utf8").trim();
-    if (!raw) return clone(fallback);
-    return JSON.parse(raw);
-  } catch {
-    return clone(fallback);
-  }
-}
-
 function currentStore() {
   const store = requestStore.getStore();
+
   if (!store) {
     throw new Error("Veritabani islemi request context disinda yapildi.");
   }
+
   return store;
 }
 
@@ -41,91 +29,228 @@ export function configureDatabaseStore(files, defaultValues) {
   defaults = { ...defaultValues };
 }
 
-/*
-  Eski Node sunucusunda başlangıçta çağrılıyordu.
-  Worker'da gerçek bağlantı her HTTP isteğinin içinde açılır.
-*/
 export async function initializeDatabaseStore() {
   return true;
 }
 
-async function createRequestStore(connectionString) {
-  if (!connectionString) throw new Error("DATABASE_URL eksik.");
+const CHUNK_SIZE = 1000000;
 
-  const client = new Client({
-    connectionString,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 20000
+function splitChunks(text) {
+  const chunks = [];
+
+  for (let i = 0; i < text.length; i += CHUNK_SIZE) {
+    chunks.push(text.slice(i, i + CHUNK_SIZE));
+  }
+
+  return chunks.length ? chunks : [""];
+}
+
+async function ensureSchema(db) {
+  await db
+    .prepare("CREATE TABLE IF NOT EXISTS sheliva_state_chunks (state_key TEXT NOT NULL, chunk_index INTEGER NOT NULL, chunk_value TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (state_key, chunk_index))")
+    .run();
+}
+
+function parseDataImage(value) {
+  if (typeof value !== "string") return null;
+
+  const match = value.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s);
+  if (!match) return null;
+
+  return {
+    contentType: match[1],
+    base64: match[2]
+  };
+}
+
+function extensionFor(contentType) {
+  const map = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "image/avif": "avif"
+  };
+
+  return map[String(contentType || "").toLowerCase()] || "img";
+}
+
+async function uploadDataImage(value, images) {
+  const parsed = parseDataImage(value);
+
+  if (!parsed || !images) return value;
+
+  const binary = atob(parsed.base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  const key =
+    `products/${new Date().toISOString().slice(0, 10)}/` +
+    `${crypto.randomUUID()}.${extensionFor(parsed.contentType)}`;
+
+  await images.put(key, bytes, {
+    httpMetadata: {
+      contentType: parsed.contentType,
+      cacheControl: "public, max-age=31536000, immutable"
+    }
   });
 
-  await client.connect();
-  await client.query("SELECT 1");
+  return `/api/images/${key}`;
+}
 
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS sheliva_state (
-      state_key TEXT PRIMARY KEY,
-      state_value JSONB NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
+async function moveImagesToR2(value, images, seen = new WeakMap()) {
+  if (typeof value === "string") {
+    return uploadDataImage(value, images);
+  }
 
-  const existingResult = await client.query(
-    "SELECT state_key, state_value FROM sheliva_state"
-  );
+  if (value == null || typeof value !== "object") {
+    return value;
+  }
 
-  const existing = new Map(
-    existingResult.rows.map(row => [row.state_key, row.state_value])
-  );
+  if (seen.has(value)) return seen.get(value);
 
-  const cache = new Map();
+  if (Array.isArray(value)) {
+    const out = [];
+    seen.set(value, out);
 
-  for (const [key, file] of Object.entries(fileMap)) {
-    if (existing.has(key)) {
-      cache.set(file, clone(existing.get(key)));
-      continue;
+    for (const item of value) {
+      out.push(await moveImagesToR2(item, images, seen));
     }
 
+    return out;
+  }
+
+  const out = {};
+  seen.set(value, out);
+
+  for (const [key, item] of Object.entries(value)) {
+    out[key] = await moveImagesToR2(item, images, seen);
+  }
+
+  return out;
+}
+
+async function writeKey(store, key, value) {
+  const cleanValue = await moveImagesToR2(value, store.images);
+  const json = JSON.stringify(cleanValue ?? null);
+  const chunks = splitChunks(json);
+
+  const statements = [
+    store.db
+      .prepare("DELETE FROM sheliva_state_chunks WHERE state_key = ?")
+      .bind(key)
+  ];
+
+  chunks.forEach((chunk, index) => {
+    statements.push(
+      store.db
+        .prepare("INSERT INTO sheliva_state_chunks (state_key, chunk_index, chunk_value, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)")
+        .bind(key, index, chunk)
+    );
+  });
+
+  await store.db.batch(statements);
+  return cleanValue;
+}
+
+async function loadAll(db) {
+  const result = await db
+    .prepare("SELECT state_key, chunk_index, chunk_value FROM sheliva_state_chunks ORDER BY state_key, chunk_index")
+    .all();
+
+  const grouped = new Map();
+
+  for (const row of result.results || []) {
+    if (!grouped.has(row.state_key)) {
+      grouped.set(row.state_key, []);
+    }
+
+    grouped.get(row.state_key).push(String(row.chunk_value ?? ""));
+  }
+
+  const values = new Map();
+
+  for (const [key, parts] of grouped.entries()) {
+    try {
+      values.set(key, JSON.parse(parts.join("")));
+    } catch {
+      values.set(key, null);
+    }
+  }
+
+  return values;
+}
+
+async function seedMissing(store, existing) {
+  for (const key of Object.keys(fileMap)) {
+    if (existing.has(key)) continue;
+
+    const value = Object.prototype.hasOwnProperty.call(defaults, key)
+      ? clone(defaults[key])
+      : [];
+
+    const saved = await writeKey(store, key, value);
+    existing.set(key, clone(saved));
+  }
+}
+
+async function createRequestStore(workerEnv) {
+  const db = workerEnv?.DB;
+  const images = workerEnv?.IMAGES;
+
+  if (!db) throw new Error("Cloudflare D1 DB binding eksik.");
+
+  await ensureSchema(db);
+
+  const store = {
+    db,
+    images,
+    cache: new Map(),
+    dirty: new Map()
+  };
+
+  const existing = await loadAll(db);
+  await seedMissing(store, existing);
+
+  for (const [key, file] of Object.entries(fileMap)) {
     const fallback = Object.prototype.hasOwnProperty.call(defaults, key)
       ? defaults[key]
       : [];
 
-    const seed = readLocal(file, fallback);
-    cache.set(file, clone(seed));
+    const value =
+      existing.has(key) && existing.get(key) != null
+        ? existing.get(key)
+        : fallback;
 
-    await client.query(
-      `INSERT INTO sheliva_state(state_key, state_value, updated_at)
-       VALUES($1, $2::jsonb, NOW())
-       ON CONFLICT(state_key) DO NOTHING`,
-      [key, JSON.stringify(seed)]
-    );
+    store.cache.set(file, clone(value));
   }
 
-  return {
-    client,
-    cache,
-    dirty: new Map()
-  };
+  return store;
 }
 
-export async function withDatabaseRequest(connectionString, task) {
-  const store = await createRequestStore(connectionString);
+export async function withDatabaseRequest(workerEnv, task) {
+  const store = await createRequestStore(workerEnv);
 
   return requestStore.run(store, async () => {
     try {
       return await task();
     } finally {
-      try {
-        await flushDatabaseWrites();
-      } finally {
-        await store.client.end().catch(() => {});
-      }
+      await flushDatabaseWrites();
     }
   });
 }
 
 export function databaseRead(file, fallback = []) {
   const store = currentStore();
-  if (!store.cache.has(file)) store.cache.set(file, clone(fallback));
+
+  if (!store.cache.has(file)) {
+    store.cache.set(file, clone(fallback));
+  }
+
   return clone(store.cache.get(file));
 }
 
@@ -143,15 +268,12 @@ export async function flushDatabaseWrites() {
   const entries = [...store.dirty.entries()];
 
   for (const [key, snapshot] of entries) {
-    await store.client.query(
-      `INSERT INTO sheliva_state(state_key, state_value, updated_at)
-       VALUES($1, $2::jsonb, NOW())
-       ON CONFLICT(state_key)
-       DO UPDATE SET
-         state_value = EXCLUDED.state_value,
-         updated_at = NOW()`,
-      [key, JSON.stringify(snapshot)]
-    );
+    const saved = await writeKey(store, key, snapshot);
+
+    const file = fileMap[key];
+    if (file) {
+      store.cache.set(file, clone(saved));
+    }
 
     store.dirty.delete(key);
   }
@@ -160,15 +282,17 @@ export async function flushDatabaseWrites() {
 export async function databaseHealth() {
   const store = currentStore();
 
-  const result = await store.client.query(
-    "SELECT NOW() AS now, COUNT(*)::int AS keys FROM sheliva_state"
-  );
+  const result = await store.db
+    .prepare("SELECT COUNT(DISTINCT state_key) AS keys, COUNT(*) AS chunks FROM sheliva_state_chunks")
+    .first();
 
   return {
     ok: true,
-    database: "neon-postgresql",
-    keys: result.rows[0].keys,
-    serverTime: result.rows[0].now
+    database: "cloudflare-d1",
+    keys: Number(result?.keys || 0),
+    chunks: Number(result?.chunks || 0),
+    r2: store.images ? "connected" : "missing",
+    serverTime: new Date().toISOString()
   };
 }
 
@@ -176,9 +300,5 @@ export async function closeDatabase() {
   const store = requestStore.getStore();
   if (!store) return;
 
-  try {
-    await flushDatabaseWrites();
-  } finally {
-    await store.client.end().catch(() => {});
-  }
+  await flushDatabaseWrites();
 }

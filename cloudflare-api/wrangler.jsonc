@@ -7,5 +7,18 @@
   "preview_urls": false,
   "observability": {
     "enabled": true
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sheliva-db",
+      "database_id": "966a89aa-f711-4f4e-9ade-28f28dcbfb85"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "sheliva-images"
+    }
+  ]
 }
