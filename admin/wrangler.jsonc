@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sheliva-admin-ahmet",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-08-16",
+  "services": [
+    { "binding": "API", "service": "sheliva-api" }
+  ]
+}
