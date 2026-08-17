@@ -365,6 +365,23 @@ function saveImage(data,prefix){
 function color(c,pid,i){const images=[];for(const x of c.images||[]){if(typeof x==="string"&&x)images.push(x);else if(x?.url)images.push(x.url);else if(x?.data){const s=saveImage(x.data,`p${pid}-c${i+1}`);if(s)images.push(s)}}if(!images.length&&c.image)images.push(c.image);const sizes={};for(const s of ["36","37","38","39","40","41"])sizes[s]=n(c.sizes?.[s]);return{id:c.id||`CLR-${Date.now()}-${i+1}`,name:c.name||`Renk ${i+1}`,images,image:images[0]||"",sizes}}
 const enrich=p=>({...p,stock:stock(p),salePrice:sale(p),totalCost:cost(p),grossProfit:Math.round((sale(p)-cost(p))*100)/100});
 
+// SHELIVA_HOME_HERO_SLOT_V1
+function normalizeHeroSlot(value){
+  const slot=n(value);
+  return slot===1 || slot===2 ? slot : 0;
+}
+
+function clearHeroSlotFromOthers(list,currentId,slot){
+  if(!slot) return;
+
+  for(const item of list){
+    if(n(item.id)!==n(currentId) && normalizeHeroSlot(item.heroSlot)===slot){
+      item.heroSlot=0;
+      item.updatedAt=now();
+    }
+  }
+}
+
 function restoreOrderStock(order){
   if(!order?.stockReserved || order?.stockRestored) return order;
 
@@ -675,9 +692,97 @@ app.use((req,res,next)=>{
   return needAdmin(req,res,next);
 });
 
-app.get("/api/products",(q,r)=>r.json(read(F.products,[]).map(enrich)));
-app.post("/api/products",(q,r)=>{const list=read(F.products,[]),id=nextId(list),colors=Array.isArray(q.body.colors)?q.body.colors.map((c,i)=>color(c,id,i)):[];const p={id,code:q.body.code||`SHL-${String(id).padStart(4,"0")}`,name:q.body.name||"Yeni Ürün",category:q.body.category||"Yazlık",description:q.body.description||"",quality:q.body.quality||"",sole:q.body.sole||"",price:n(q.body.price),discount:n(q.body.discount),purchasePrice:n(q.body.purchasePrice),vatRate:n(q.body.vatRate),shippingCost:n(q.body.shippingCost),packagingCost:n(q.body.packagingCost),otherCost:n(q.body.otherCost),active:q.body.active!==false,newest:q.body.newest!==false,featured:q.body.featured===true,features:q.body.features||"",measurements:q.body.measurements||"",paymentInfo:q.body.paymentInfo||"",shippingReturns:q.body.shippingReturns||"",faq:q.body.faq||"",colors,image:colors?.[0]?.images?.[0]||"",totalSold:n(q.body.totalSold),createdAt:now()};list.push(p);write(F.products,list);r.status(201).json(enrich(p))});
-app.put("/api/products/:id",(q,r)=>{const id=n(q.params.id),list=read(F.products,[]),idx=list.findIndex(p=>n(p.id)===id);if(idx<0)return r.status(404).json({error:"Ürün bulunamadı."});const old=list[idx],colors=Array.isArray(q.body.colors)?q.body.colors.map((c,i)=>color(c,id,i)):old.colors||[];list[idx]={...old,...q.body,id,colors,image:colors?.[0]?.images?.[0]||old.image||"",updatedAt:now()};write(F.products,list);r.json(enrich(list[idx]))});app.delete("/api/products/:id",(q,r)=>{write(F.products,read(F.products,[]).filter(p=>n(p.id)!==n(q.params.id)));r.json({ok:true})});
+/* SHELIVA_PRODUCT_ROUTES_HERO_SLOT_V1 */
+app.get("/api/products",(q,r)=>
+  r.json(read(F.products,[]).map(enrich))
+);
+
+app.post("/api/products",(q,r)=>{
+  const list=read(F.products,[]);
+  const id=nextId(list);
+  const heroSlot=normalizeHeroSlot(q.body.heroSlot);
+  const colors=Array.isArray(q.body.colors)
+    ? q.body.colors.map((c,i)=>color(c,id,i))
+    : [];
+
+  clearHeroSlotFromOthers(list,id,heroSlot);
+
+  const p={
+    id,
+    code:q.body.code||`SHL-${String(id).padStart(4,"0")}`,
+    name:q.body.name||"Yeni Ürün",
+    category:q.body.category||"Yazlık",
+    description:q.body.description||"",
+    quality:q.body.quality||"",
+    sole:q.body.sole||"",
+    price:n(q.body.price),
+    discount:n(q.body.discount),
+    purchasePrice:n(q.body.purchasePrice),
+    vatRate:n(q.body.vatRate),
+    shippingCost:n(q.body.shippingCost),
+    packagingCost:n(q.body.packagingCost),
+    otherCost:n(q.body.otherCost),
+    active:q.body.active!==false,
+    newest:q.body.newest!==false,
+    featured:q.body.featured===true,
+    heroSlot,
+    features:q.body.features||"",
+    measurements:q.body.measurements||"",
+    paymentInfo:q.body.paymentInfo||"",
+    shippingReturns:q.body.shippingReturns||"",
+    faq:q.body.faq||"",
+    colors,
+    image:colors?.[0]?.images?.[0]||"",
+    totalSold:n(q.body.totalSold),
+    createdAt:now()
+  };
+
+  list.push(p);
+  write(F.products,list);
+  r.status(201).json(enrich(p));
+});
+
+app.put("/api/products/:id",(q,r)=>{
+  const id=n(q.params.id);
+  const list=read(F.products,[]);
+  const idx=list.findIndex(p=>n(p.id)===id);
+
+  if(idx<0){
+    return r.status(404).json({error:"Ürün bulunamadı."});
+  }
+
+  const old=list[idx];
+  const heroSlot=Object.prototype.hasOwnProperty.call(q.body,"heroSlot")
+    ? normalizeHeroSlot(q.body.heroSlot)
+    : normalizeHeroSlot(old.heroSlot);
+
+  const colors=Array.isArray(q.body.colors)
+    ? q.body.colors.map((c,i)=>color(c,id,i))
+    : old.colors||[];
+
+  clearHeroSlotFromOthers(list,id,heroSlot);
+
+  list[idx]={
+    ...old,
+    ...q.body,
+    id,
+    heroSlot,
+    colors,
+    image:colors?.[0]?.images?.[0]||old.image||"",
+    updatedAt:now()
+  };
+
+  write(F.products,list);
+  r.json(enrich(list[idx]));
+});
+
+app.delete("/api/products/:id",(q,r)=>{
+  write(
+    F.products,
+    read(F.products,[]).filter(p=>n(p.id)!==n(q.params.id))
+  );
+  r.json({ok:true});
+});
 
 app.get("/api/orders",(q,r)=>r.json([...read(F.orders,[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))));
 app.post("/api/orders",async(q,r)=>{

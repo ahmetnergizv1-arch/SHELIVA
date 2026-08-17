@@ -63,6 +63,7 @@ function emptyProduct() {
     active:true,
     newest:true,
     featured:false,
+    heroSlot:0,
 
     colors:[emptyColor(1)]
   };
@@ -1223,6 +1224,21 @@ export default function App() {
                         {totalStock(product)} stok
                       </p>
 
+                      {n(product.heroSlot)>0 && (
+                        <p style={{
+                          display:"inline-block",
+                          margin:"4px 0 8px",
+                          padding:"5px 8px",
+                          borderRadius:8,
+                          background:"#111",
+                          color:"#fff",
+                          fontSize:11,
+                          fontWeight:800
+                        }}>
+                          ANA SAYFA • {product.heroSlot}. PANEL
+                        </p>
+                      )}
+
                       <div className="pricePair">
                         {n(product.discount)>0 && (
                           <del>
@@ -2008,6 +2024,57 @@ function ProductModal({
                   onChange={e=>setProduct({...product,faq:e.target.value})}
                 />
               </label>
+
+              {/* SHELIVA_ADMIN_HERO_PANEL_PICKER_V1 */}
+              <h3>Ana Sayfa Uzun Paneller</h3>
+
+              <div style={{
+                display:"grid",
+                gridTemplateColumns:"repeat(3,minmax(0,1fr))",
+                gap:10,
+                marginBottom:8
+              }}>
+                {[
+                  [0,"PANELDE YOK"],
+                  [1,"1. UZUN PANEL"],
+                  [2,"2. UZUN PANEL"]
+                ].map(([slot,label])=>(
+                  <button
+                    type="button"
+                    key={slot}
+                    onClick={()=>setProduct({...product,heroSlot:slot})}
+                    style={{
+                      border:n(product.heroSlot)===slot
+                        ? "2px solid #111"
+                        : "1px solid #d8d8d8",
+                      background:n(product.heroSlot)===slot
+                        ? "#111"
+                        : "#fff",
+                      color:n(product.heroSlot)===slot
+                        ? "#fff"
+                        : "#111",
+                      borderRadius:12,
+                      padding:"13px 10px",
+                      fontWeight:800,
+                      cursor:"pointer"
+                    }}
+                  >
+                    {n(product.heroSlot)===slot ? "✓ " : ""}
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <small style={{
+                display:"block",
+                color:"#777",
+                lineHeight:1.5,
+                marginBottom:20
+              }}>
+                1 veya 2 seçildiğinde ana sayfadaki ilgili uzun panelde
+                bu ürün ve bu ürünün ilk fotoğrafı gösterilir.
+                Aynı paneli başka üründe seçersen eski seçim otomatik kaldırılır.
+              </small>
 
               <h3>Fiyat & Maliyet</h3>
 
