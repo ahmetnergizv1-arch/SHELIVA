@@ -3636,3 +3636,112 @@ a {
 }
 
 /* SHELIVA_PRODUCT_BOTTOM_ANCHOR_V2_END */
+
+
+/* SHELIVA_FINAL_HOMEPAGE_V2_START */
+
+/* Panel foto: admin'de nasil altini ayarladiysan alt referans */
+.heroTop .heroPhoto img,
+.heroBottom .heroPhoto img {
+  object-fit: cover !important;
+  object-position: center bottom !important;
+}
+
+/* Urun karti: crop foto altindan baslar */
+.productImg img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center bottom !important;
+}
+
+/* Urun detay / thumb */
+.mainPhotoV3 img,
+.mainPhoto > img,
+.thumbsV3 img,
+.thumbs img {
+  object-position: center bottom !important;
+}
+
+/* Dev boslugu kapat */
+.categoryGrid {
+  margin: 18px auto 18px !important;
+}
+
+.products {
+  padding: 0 0 100px !important;
+}
+
+/* Tum Urunler - urun fotosu kullanma, premium/egzotik blok */
+.productsTitle {
+  position: relative !important;
+  isolation: isolate;
+  overflow: hidden;
+  width: min(1180px, calc(100% - 28px));
+  margin: 0 auto 28px !important;
+  padding: 32px 24px 28px !important;
+  text-align: center;
+  background-image: none !important;
+  background:
+    radial-gradient(circle at 50% -80%, rgba(49,151,119,.28), transparent 50%),
+    linear-gradient(135deg, #0f1110 0%, #1b1e1d 50%, #0d0f0e 100%) !important;
+  border: 1px solid rgba(73,174,140,.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 16px 42px rgba(0,0,0,.22);
+}
+
+.productsTitle::before,
+.productsTitle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: min(20%, 180px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(67,178,141,.72));
+  pointer-events: none;
+}
+
+.productsTitle::before { left: 7%; }
+.productsTitle::after  { right: 7%; transform: scaleX(-1); }
+
+.productsTitle span {
+  display: block !important;
+  color: #43b28d !important;
+  letter-spacing: 8px !important;
+  font-size: 10px !important;
+  margin-bottom: 7px !important;
+}
+
+.productsTitle h2 {
+  display: inline-block;
+  margin: 0 !important;
+  padding: 0 24px;
+  font-family: "Playfair Display", serif !important;
+  font-style: italic;
+  font-size: clamp(35px,4vw,52px) !important;
+  font-weight: 500;
+  color: #f3efe9;
+  text-shadow: 0 4px 22px rgba(0,0,0,.38);
+}
+
+.productsTitle h2::after {
+  content: "✦";
+  display: block;
+  margin-top: 7px;
+  color: #43b28d;
+  font-size: 11px;
+  font-style: normal;
+}
+
+@media(max-width:700px){
+  .categoryGrid { margin-bottom: 12px !important; }
+  .products { padding-top: 0 !important; }
+  .productsTitle {
+    width: calc(100% - 20px);
+    padding: 24px 14px 20px !important;
+    margin-bottom: 18px !important;
+  }
+}
+
+/* SHELIVA_FINAL_HOMEPAGE_V2_END */

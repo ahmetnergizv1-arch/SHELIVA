@@ -209,7 +209,6 @@ export default function App() {
       "İNDİRİMDE":products.filter(p=>
         Number(p.discount||0)>0
       ),
-      "TÜM ÜRÜNLER":products,
       "SON GELENLER":newest.filter(p=>p.newest!==false)
     };
 
@@ -1474,16 +1473,13 @@ if (loading) {
       {page==="home" && (
         <main className="homeMain">
 
-          {promoProduct && (
+          {promoProduct && settings.heroPanel1Image && (
           <section className="heroBanner heroTop">
 
             <div className="heroPhoto">
               <img
                 src={
-                  imageUrl(
-                    settings.heroPanel1Image ||
-                    firstImage(promoProduct)
-                  )
+                  imageUrl(settings.heroPanel1Image)
                 }
                 alt="SHELİVA ana sayfa 1. panel"
               />
@@ -1518,7 +1514,7 @@ if (loading) {
           </section>
           )}
 
-          {bestseller && (
+          {bestseller && settings.heroPanel2Image && (
           <section className="heroBanner heroBottom">
 
             <div className="heroBlack">
@@ -1548,10 +1544,7 @@ if (loading) {
             <div className="heroPhoto">
               <img
                 src={
-                  imageUrl(
-                    settings.heroPanel2Image ||
-                    firstImage(bestseller)
-                  )
+                  imageUrl(settings.heroPanel2Image)
                 }
                 alt="SHELİVA ana sayfa 2. panel"
                 style={{
