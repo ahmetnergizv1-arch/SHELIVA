@@ -642,6 +642,36 @@ export default function App() {
     await refresh();
   }
 
+  // SHELIVA_HOMEPAGE_PANEL_IMAGE_SETTINGS_V1
+  function chooseHomepagePanelImage(event,key){
+    const file=event.target.files?.[0];
+    if(!file) return;
+
+    if(!file.type?.startsWith("image/")){
+      showAdminToast("Lütfen bir fotoğraf seç.","error");
+      event.target.value="";
+      return;
+    }
+
+    const reader=new FileReader();
+
+    reader.onload=()=>{
+      settingsDirtyRef.current=true;
+      setSettings(current=>({
+        ...current,
+        [key]:reader.result
+      }));
+      event.target.value="";
+    };
+
+    reader.onerror=()=>{
+      showAdminToast("Fotoğraf okunamadı.","error");
+      event.target.value="";
+    };
+
+    reader.readAsDataURL(file);
+  }
+
   async function saveSettings() {
     const res = await adminFetch(`${API}/api/settings`,{
       method:"PUT",
@@ -1224,21 +1254,6 @@ export default function App() {
                         {totalStock(product)} stok
                       </p>
 
-                      {n(product.heroSlot)>0 && (
-                        <p style={{
-                          display:"inline-block",
-                          margin:"4px 0 8px",
-                          padding:"5px 8px",
-                          borderRadius:8,
-                          background:"#111",
-                          color:"#fff",
-                          fontSize:11,
-                          fontWeight:800
-                        }}>
-                          ANA SAYFA • {product.heroSlot}. PANEL
-                        </p>
-                      )}
-
                       <div className="pricePair">
                         {n(product.discount)>0 && (
                           <del>
@@ -1585,6 +1600,122 @@ export default function App() {
             <div className="pageTitle">
               <div><h2>SHELİVA Ayarları</h2><p>Mağaza ve sipariş ayarlarını tek yerden yönet.</p></div>
               <button onClick={saveSettings}>AYARLARI KAYDET</button>
+            </div>
+
+            {/* SHELIVA_HERO_PHOTO_SETTINGS_UI_V1 */}
+            <div style={{
+              marginBottom:24,
+              padding:20,
+              border:"1px solid #e4e4e4",
+              borderRadius:16,
+              background:"#fafafa"
+            }}>
+              <div style={{marginBottom:16}}>
+                <h3 style={{margin:"0 0 6px"}}>Ana Sayfa Uzun Panel Fotoğrafları</h3>
+                <p style={{margin:0,color:"#777"}}>
+                  Bu fotoğraflar ürün fotoğraflarından bağımsızdır. Ana sayfadaki iki büyük uzun alanda kullanılır.
+                </p>
+              </div>
+
+              <div style={{
+                display:"grid",
+                gridTemplateColumns:"repeat(2,minmax(0,1fr))",
+                gap:16
+              }}>
+                {[
+                  ["heroPanel1Image","1. FOTO"],
+                  ["heroPanel2Image","2. FOTO"]
+                ].map(([key,label])=>(
+                  <div
+                    key={key}
+                    style={{
+                      border:"1px solid #ddd",
+                      borderRadius:14,
+                      padding:14,
+                      background:"#fff"
+                    }}
+                  >
+                    <b style={{display:"block",marginBottom:10}}>{label}</b>
+
+                    <div style={{
+                      width:"100%",
+                      aspectRatio:"16 / 7",
+                      borderRadius:10,
+                      overflow:"hidden",
+                      background:"#f0f0f0",
+                      display:"grid",
+                      placeItems:"center",
+                      marginBottom:10
+                    }}>
+                      {settings[key] ? (
+                        <img
+                          src={settings[key]}
+                          alt={label}
+                          style={{
+                            width:"100%",
+                            height:"100%",
+                            objectFit:"cover"
+                          }}
+                        />
+                      ) : (
+                        <span style={{color:"#999"}}>Fotoğraf seçilmedi</span>
+                      )}
+                    </div>
+
+                    <div style={{
+                      display:"grid",
+                      gridTemplateColumns:"1fr auto",
+                      gap:8
+                    }}>
+                      <label style={{
+                        display:"grid",
+                        placeItems:"center",
+                        minHeight:42,
+                        borderRadius:10,
+                        background:"#111",
+                        color:"#fff",
+                        fontWeight:800,
+                        cursor:"pointer"
+                      }}>
+                        FOTOĞRAF SEÇ
+                        <input
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          onChange={event=>chooseHomepagePanelImage(event,key)}
+                        />
+                      </label>
+
+                      {settings[key] && (
+                        <button
+                          type="button"
+                          onClick={()=>{
+                            settingsDirtyRef.current=true;
+                            setSettings(current=>({
+                              ...current,
+                              [key]:""
+                            }));
+                          }}
+                          style={{
+                            border:"1px solid #ddd",
+                            borderRadius:10,
+                            background:"#fff",
+                            padding:"0 14px",
+                            fontWeight:700,
+                            cursor:"pointer"
+                          }}
+                        >
+                          KALDIR
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <small style={{display:"block",marginTop:12,color:"#777"}}>
+                Fotoğrafı seçtikten sonra sağ üstteki AYARLARI KAYDET tuşuna bas.
+              </small>
             </div>
 
             <div className="settingsGrid">
@@ -2024,58 +2155,6 @@ function ProductModal({
                   onChange={e=>setProduct({...product,faq:e.target.value})}
                 />
               </label>
-
-              {/* SHELIVA_ADMIN_HERO_PANEL_PICKER_V1 */}
-              <h3>Ana Sayfa Uzun Paneller</h3>
-
-              <div style={{
-                display:"grid",
-                gridTemplateColumns:"repeat(3,minmax(0,1fr))",
-                gap:10,
-                marginBottom:8
-              }}>
-                {[
-                  [0,"PANELDE YOK"],
-                  [1,"1. UZUN PANEL"],
-                  [2,"2. UZUN PANEL"]
-                ].map(([slot,label])=>(
-                  <button
-                    type="button"
-                    key={slot}
-                    onClick={()=>setProduct({...product,heroSlot:slot})}
-                    style={{
-                      border:n(product.heroSlot)===slot
-                        ? "2px solid #111"
-                        : "1px solid #d8d8d8",
-                      background:n(product.heroSlot)===slot
-                        ? "#111"
-                        : "#fff",
-                      color:n(product.heroSlot)===slot
-                        ? "#fff"
-                        : "#111",
-                      borderRadius:12,
-                      padding:"13px 10px",
-                      fontWeight:800,
-                      cursor:"pointer"
-                    }}
-                  >
-                    {n(product.heroSlot)===slot ? "✓ " : ""}
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              <small style={{
-                display:"block",
-                color:"#777",
-                lineHeight:1.5,
-                marginBottom:20
-              }}>
-                1 veya 2 seçildiğinde ana sayfadaki ilgili uzun panelde
-                bu ürün ve bu ürünün ilk fotoğrafı gösterilir.
-                Aynı paneli başka üründe seçersen eski seçim otomatik kaldırılır.
-              </small>
-
               <h3>Fiyat & Maliyet</h3>
 
               <div className="costGrid">

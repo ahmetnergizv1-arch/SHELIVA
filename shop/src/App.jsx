@@ -655,24 +655,15 @@ export default function App() {
           firstImage(product)
       );
 
-  // SHELIVA_MANUAL_HERO_PANELS_V1
-  // Admin panelinden 1 veya 2 secilirse manuel urun kullanilir.
-  // Hicbir urun secilmediyse panel bos kalmasin diye eski otomatik secim devam eder.
-  const automaticPromoProduct=
+  // SHELIVA_HERO_PRODUCTS_AUTOMATIC_V2
+  // Urun secimi otomatik kalir; panel fotograflari admin ayarlarindan gelir.
+  const promoProduct=
     [...stockedProducts]
       .sort((a,b)=>salePrice(b)-salePrice(a))[0] || null;
 
-  const automaticBestseller=
+  const bestseller=
     [...stockedProducts]
       .sort((a,b)=>n(b.totalSold)-n(a.totalSold))[0] || null;
-
-  const promoProduct=
-    stockedProducts.find(product=>n(product.heroSlot)===1) ||
-    automaticPromoProduct;
-
-  const bestseller=
-    stockedProducts.find(product=>n(product.heroSlot)===2) ||
-    automaticBestseller;
 
   function pickCategoryProduct(list){
     const available=(list||[]).filter(p=>firstImage(p));
@@ -1490,9 +1481,11 @@ if (loading) {
               <img
                 src={
                   imageUrl(
+                    settings.heroPanel1Image ||
                     firstImage(promoProduct)
                   )
                 }
+                alt="SHELİVA ana sayfa 1. panel"
               />
             </div>
 
@@ -1556,9 +1549,11 @@ if (loading) {
               <img
                 src={
                   imageUrl(
+                    settings.heroPanel2Image ||
                     firstImage(bestseller)
                   )
                 }
+                alt="SHELİVA ana sayfa 2. panel"
                 style={{
                   objectFit:"cover",
                   objectPosition:"center bottom"
