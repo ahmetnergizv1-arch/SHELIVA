@@ -3637,111 +3637,161 @@ a {
 
 /* SHELIVA_PRODUCT_BOTTOM_ANCHOR_V2_END */
 
+/* SHELIVA_PANEL_ALT_HIZA_V3_START */
 
-/* SHELIVA_FINAL_HOMEPAGE_V2_START */
-
-/* Panel foto: admin'de nasil altini ayarladiysan alt referans */
-.heroTop .heroPhoto img,
-.heroBottom .heroPhoto img {
-  object-fit: cover !important;
-  object-position: center bottom !important;
+/* Uzun panel genel boyut: biraz daha kucuk, daha dengeli */
+.heroBanner {
+  min-height: clamp(320px, 35vw, 470px) !important;
 }
 
-/* Urun karti: crop foto altindan baslar */
-.productImg img {
+.heroBanner .heroPhoto {
+  min-height: clamp(320px, 35vw, 470px) !important;
+  overflow: hidden !important;
+}
+
+/* Admin > Ayarlar > 1.FOTO / 2.FOTO icin alt referans */
+.heroTop .heroPhoto img,
+.heroBottom .heroPhoto img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center bottom !important;
+  transform: scale(0.88) !important;
+  transform-origin: center bottom !important;
+}
+
+/* Anasayfa urun kartlari */
+.productImg,
+.productImage,
+.productCard .imageWrap,
+.productCard .productImg {
+  overflow: hidden !important;
+}
+
+.productImg img,
+.productImage img,
+.productCard .imageWrap img,
+.productCard .productImg img {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
   object-position: center bottom !important;
 }
 
-/* Urun detay / thumb */
+/* Urun detay sayfasi ana foto + kucuk fotolar */
+.mainPhoto img,
 .mainPhotoV3 img,
-.mainPhoto > img,
+.thumbs img,
 .thumbsV3 img,
-.thumbs img {
+.productGallery img {
+  object-fit: contain !important;
   object-position: center bottom !important;
+  background: #fff !important;
 }
 
-/* Dev boslugu kapat */
+/* Kategori ile Tum Urunler arasi bosluk kapat */
 .categoryGrid {
-  margin: 18px auto 18px !important;
+  margin-bottom: 10px !important;
 }
 
 .products {
-  padding: 0 0 100px !important;
+  padding-top: 0 !important;
 }
 
-/* Tum Urunler - urun fotosu kullanma, premium/egzotik blok */
+/* Tum Urunler basligi: daha genis, daha uzun, premium */
 .productsTitle {
   position: relative !important;
-  isolation: isolate;
-  overflow: hidden;
-  width: min(1180px, calc(100% - 28px));
+  isolation: isolate !important;
+  overflow: hidden !important;
+  width: min(1400px, calc(100% - 30px)) !important;
   margin: 0 auto 28px !important;
-  padding: 32px 24px 28px !important;
-  text-align: center;
+  padding: 42px 28px 38px !important;
+  text-align: center !important;
   background-image: none !important;
   background:
-    radial-gradient(circle at 50% -80%, rgba(49,151,119,.28), transparent 50%),
-    linear-gradient(135deg, #0f1110 0%, #1b1e1d 50%, #0d0f0e 100%) !important;
-  border: 1px solid rgba(73,174,140,.22);
+    radial-gradient(circle at 50% -90%, rgba(49,151,119,.24), transparent 52%),
+    linear-gradient(135deg, #0d0f0e 0%, #141817 50%, #0c0e0d 100%) !important;
+  border: 1px solid rgba(67,178,141,.22) !important;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.035),
-    0 16px 42px rgba(0,0,0,.22);
+    0 20px 44px rgba(0,0,0,.20) !important;
 }
 
 .productsTitle::before,
 .productsTitle::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: min(20%, 180px);
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(67,178,141,.72));
-  pointer-events: none;
+  content: "" !important;
+  position: absolute !important;
+  top: 50% !important;
+  width: min(17%, 220px) !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, rgba(67,178,141,.72)) !important;
+  pointer-events: none !important;
 }
 
-.productsTitle::before { left: 7%; }
-.productsTitle::after  { right: 7%; transform: scaleX(-1); }
+.productsTitle::before { left: 7% !important; }
+.productsTitle::after  { right: 7% !important; transform: scaleX(-1) !important; }
 
 .productsTitle span {
   display: block !important;
   color: #43b28d !important;
-  letter-spacing: 8px !important;
-  font-size: 10px !important;
-  margin-bottom: 7px !important;
+  letter-spacing: 9px !important;
+  font-size: 11px !important;
+  margin-bottom: 8px !important;
 }
 
 .productsTitle h2 {
-  display: inline-block;
+  display: inline-block !important;
   margin: 0 !important;
-  padding: 0 24px;
+  padding: 0 26px !important;
   font-family: "Playfair Display", serif !important;
-  font-style: italic;
-  font-size: clamp(35px,4vw,52px) !important;
-  font-weight: 500;
-  color: #f3efe9;
-  text-shadow: 0 4px 22px rgba(0,0,0,.38);
+  font-style: italic !important;
+  font-size: clamp(40px, 4.3vw, 66px) !important;
+  line-height: 1.06 !important;
+  font-weight: 500 !important;
+  color: #f4efe8 !important;
+  text-shadow: 0 4px 22px rgba(0,0,0,.38) !important;
 }
 
 .productsTitle h2::after {
-  content: "✦";
-  display: block;
-  margin-top: 7px;
-  color: #43b28d;
-  font-size: 11px;
-  font-style: normal;
+  content: "âœ¦" !important;
+  display: block !important;
+  margin-top: 8px !important;
+  color: #43b28d !important;
+  font-size: 12px !important;
+  font-style: normal !important;
 }
 
-@media(max-width:700px){
-  .categoryGrid { margin-bottom: 12px !important; }
-  .products { padding-top: 0 !important; }
-  .productsTitle {
-    width: calc(100% - 20px);
-    padding: 24px 14px 20px !important;
-    margin-bottom: 18px !important;
+@media (max-width: 900px) {
+  .heroBanner,
+  .heroBanner .heroPhoto {
+    min-height: 280px !important;
+  }
+
+  .heroTop .heroPhoto img,
+  .heroBottom .heroPhoto img {
+    transform: scale(0.92) !important;
   }
 }
 
-/* SHELIVA_FINAL_HOMEPAGE_V2_END */
+@media (max-width: 700px) {
+  .categoryGrid { margin-bottom: 8px !important; }
+
+  .productsTitle {
+    width: calc(100% - 18px) !important;
+    padding: 28px 14px 24px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .productsTitle::before,
+  .productsTitle::after {
+    width: 22% !important;
+    top: 52% !important;
+  }
+
+  .productsTitle h2 {
+    padding: 0 10px !important;
+    font-size: clamp(30px, 8vw, 42px) !important;
+  }
+}
+
+/* SHELIVA_PANEL_ALT_HIZA_V3_END */
