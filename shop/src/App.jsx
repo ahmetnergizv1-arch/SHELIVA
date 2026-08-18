@@ -1371,6 +1371,36 @@ export default function App() {
 
     return !["Teslim Edildi","İptal"].includes(order.status);
   });
+  // SHELIVA_TRUE_BOTTOM_HALF_CROP_V1
+  function fitHeroBottomHalf(event){
+    const img=event.currentTarget;
+    const photo=img.closest(".heroPhoto");
+    const banner=img.closest(".heroBanner");
+    if(!photo || !banner || !img.naturalWidth || !img.naturalHeight) return;
+
+    const update=()=>{
+      const photoWidth=photo.clientWidth;
+      if(!photoWidth) return;
+
+      const renderedFullHeight=
+        photoWidth * (img.naturalHeight / img.naturalWidth);
+
+      const cropHeight=Math.round(renderedFullHeight / 2);
+
+      banner.style.height=`${cropHeight}px`;
+      banner.style.minHeight=`${cropHeight}px`;
+      photo.style.height=`${cropHeight}px`;
+    };
+
+    update();
+
+    if(!img.__shelivaBottomHalfObserver){
+      const observer=new ResizeObserver(update);
+      observer.observe(photo);
+      img.__shelivaBottomHalfObserver=observer;
+    }
+  }
+
 if (loading) {
     return (
       <div className="loading">
@@ -1482,6 +1512,7 @@ if (loading) {
                   imageUrl(settings.heroPanel1Image)
                 }
                 alt="SHELİVA ana sayfa 1. panel"
+                onLoad={fitHeroBottomHalf}
               />
             </div>
 
@@ -1547,10 +1578,7 @@ if (loading) {
                   imageUrl(settings.heroPanel2Image)
                 }
                 alt="SHELİVA ana sayfa 2. panel"
-                style={{
-                  objectFit:"cover",
-                  objectPosition:"center bottom"
-                }}
+                onLoad={fitHeroBottomHalf}
               />
             </div>
 

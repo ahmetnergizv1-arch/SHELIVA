@@ -3788,3 +3788,42 @@ a {
 }
 
 /* SHELIVA_PANEL_ALT_HIZA_V5_END */
+
+
+/* SHELIVA_TRUE_BOTTOM_HALF_CROP_V1_START */
+.heroBanner {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.heroBanner .heroPhoto {
+  position: relative !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  background: #fff !important;
+}
+
+.heroTop .heroPhoto img,
+.heroBottom .heroPhoto img {
+  position: absolute !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  object-fit: initial !important;
+  object-position: initial !important;
+  transform: none !important;
+  transform-origin: initial !important;
+  display: block !important;
+}
+
+@media (max-width: 900px) {
+  .heroBanner,
+  .heroBanner .heroPhoto { min-height: 0 !important; }
+
+  .heroTop .heroPhoto img,
+  .heroBottom .heroPhoto img { transform: none !important; }
+}
+/* SHELIVA_TRUE_BOTTOM_HALF_CROP_V1_END */
