@@ -3586,3 +3586,24 @@ a {
 }
 
 /* SHELIVA_HERO_ONLY_FIX_END */
+
+
+/* === SHELIVA BOTTOM ALIGN FIX START === */
+.heroBanner img,
+.heroPhoto img,
+.mainPhotoV3 img,
+.thumbsV3 img,
+.productImg img,
+.categoryGrid img {
+  object-position: center bottom !important;
+}
+
+.productImg img,
+.mainPhotoV3 img,
+.thumbsV3 img,
+.categoryGrid img {
+  object-fit: contain !important;
+  background: #fff !important;
+}
+/* === SHELIVA BOTTOM ALIGN FIX END === */
+

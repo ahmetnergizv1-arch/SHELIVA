@@ -1,2 +1,42 @@
 
 html,body,#root{margin:0;width:100%;min-height:100%}
+
+
+
+/* SHELIVA_PAYMENT_HERO_FIX_START */
+.heroBottom .heroPhoto > img,
+.heroBottom .heroImage > img,
+.hero-bottom .heroPhoto > img,
+.hero-bottom .heroImage > img{
+  object-position:center 82% !important;
+  transform:scale(.90) !important;
+}
+
+.heroTop .heroPhoto > img,
+.heroTop .heroImage > img,
+.hero-top .heroPhoto > img,
+.hero-top .heroImage > img{
+  object-position:center 74% !important;
+  transform:scale(.90) !important;
+}
+
+/* 3 kategori kartlarinda görsel kesin görünsün */
+.categoryCard img,
+.category-card img,
+.homeCategoryCard img,
+.collections-grid img{
+  display:block !important;
+  width:100% !important;
+  height:100% !important;
+  object-fit:cover !important;
+  object-position:center 72% !important;
+}
+
+.categoryCard .imageWrap,
+.category-card .imageWrap,
+.homeCategoryCard .imageWrap,
+.collections-grid .imageWrap{
+  overflow:hidden !important;
+  background:#111 !important;
+}
+/* SHELIVA_PAYMENT_HERO_FIX_END */
